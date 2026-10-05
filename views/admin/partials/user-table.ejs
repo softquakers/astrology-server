@@ -1,0 +1,118 @@
+<% if (users.length > 0) { %>
+  <div class="table-responsive">
+    <table>
+      <thead>
+        <tr>
+          <th>User Details</th>
+          <th>Plan</th>
+          <th>Monthly Fee</th>
+          <th>Payment Status</th>
+          <th>Next Billing Date</th>
+          <th>Registered</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% users.forEach(function(u) { %>
+          <tr>
+            <td>
+              <div class="user-info">
+                <div class="user-avatar">
+                  <%= (u.name || u.email).charAt(0).toUpperCase() %>
+                </div>
+                <div class="user-details">
+                  <div class="user-name"><%= u.name || "Anonymous Celestial" %></div>
+                  <div class="user-email"><%= u.email %></div>
+                </div>
+              </div>
+            </td>
+            <td>
+              <span style="font-weight: 500; text-transform: capitalize;">
+                <%= u.subscriptionPlan || "free" %>
+              </span>
+            </td>
+            <td>
+              <span style="font-weight: 600;">
+                $<%= (u.monthlyFee || 0).toFixed(2) %>/mo
+              </span>
+            </td>
+            <td>
+              <% if (u.subscriptionStatus === 'active') { %>
+                <span class="pill active">● Subscribed & Paid</span>
+              <% } else if (u.subscriptionStatus === 'unpaid') { %>
+                <span class="pill unpaid">▲ Monthly Unpaid</span>
+              <% } else if (u.subscriptionStatus === 'past_due') { %>
+                <span class="pill past_due">▲ Past Due</span>
+              <% } else if (u.subscriptionStatus === 'canceled') { %>
+                <span class="pill canceled">✕ Canceled</span>
+              <% } else { %>
+                <span class="pill free">○ Free Tier</span>
+              <% } %>
+            </td>
+            <td>
+              <% if (u.nextBillingDate) { %>
+                <span style="font-size: 0.82rem; color: <%= new Date(u.nextBillingDate) < new Date() ? '#f87171' : 'var(--text-muted)' %>">
+                  <%= new Date(u.nextBillingDate).toLocaleDateString() %>
+                  <% if (new Date(u.nextBillingDate) < new Date()) { %>
+                    <span style="font-size:0.7rem;font-weight:600;color:#f87171;">(Overdue)</span>
+                  <% } %>
+                </span>
+              <% } else { %>
+                <span style="color: #64748b;">—</span>
+              <% } %>
+            </td>
+            <td style="color: var(--text-muted); font-size: 0.82rem;">
+              <%= new Date(u.createdAt).toLocaleDateString() %>
+            </td>
+            <td>
+              <div class="actions-group">
+                <% if (u.subscriptionStatus !== 'active') { %>
+                  <form action="/admin/users/<%= u._id %>/subscription" method="POST" style="display:inline;">
+                    <input type="hidden" name="action" value="mark_paid">
+                    <button type="submit" class="btn btn-success-sm btn-sm" title="Mark as Paid Subscriber">
+                      ✓ Mark Paid
+                    </button>
+                  </form>
+                <% } else { %>
+                  <form action="/admin/users/<%= u._id %>/subscription" method="POST" style="display:inline;">
+                    <input type="hidden" name="action" value="mark_unpaid">
+                    <button type="submit" class="btn btn-danger-sm btn-sm" title="Mark Monthly Fee Unpaid">
+                      ⚠️ Unpaid
+                    </button>
+                  </form>
+                <% } %>
+
+                <form action="/admin/users/<%= u._id %>/delete" method="POST" onsubmit="return confirm('Delete user <%= u.email %>?');" style="display:inline;">
+                  <button type="submit" class="btn btn-secondary btn-sm" style="color:#ef4444;" title="Delete User">
+                    🗑️
+                  </button>
+                </form>
+              </div>
+            </td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  </div>
+<% } else { %>
+  <!-- Empty State -->
+  <div class="empty-state">
+    <div class="empty-state-icon">🌌</div>
+    <h3>No Users Found</h3>
+    <p>
+      <% if (searchQuery) { %>
+        No profiles matched your search "<%= searchQuery %>". Try searching a different keyword.
+      <% } else if (currentFilter !== 'all') { %>
+        No users currently match the "<%= currentFilter %>" filter category.
+      <% } else { %>
+        Your database currently has no user records. Seed sample users to test the dashboard immediately!
+      <% } %>
+    </p>
+
+    <form action="/admin/seed" method="POST">
+      <button type="submit" class="btn btn-gold">
+        🌱 Seed Realistic Demo Users
+      </button>
+    </form>
+  </div>
+<% } %>

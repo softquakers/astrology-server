@@ -1,0 +1,33 @@
+<div class="table-header">
+  <!-- Filter Tabs -->
+  <div class="filter-tabs">
+    <a href="/admin?filter=all" class="filter-tab <%= currentFilter === 'all' ? 'active' : '' %>">
+      All Users (<%= stats.totalUsers %>)
+    </a>
+    <a href="/admin?filter=subscribed" class="filter-tab <%= currentFilter === 'subscribed' ? 'active' : '' %>">
+      Subscribed (<%= stats.subscribedUsers %>)
+    </a>
+    <a href="/admin?filter=unpaid" class="filter-tab <%= currentFilter === 'unpaid' ? 'active' : '' %>">
+      Unpaid Fee (<%= stats.unpaidUsers %>)
+    </a>
+    <a href="/admin?filter=free" class="filter-tab <%= currentFilter === 'free' ? 'active' : '' %>">
+      Free Tier (<%= stats.freeUsers %>)
+    </a>
+  </div>
+
+  <!-- Search Form -->
+  <form action="/admin" method="GET" class="search-form">
+    <input type="hidden" name="filter" value="<%= currentFilter %>">
+    <input 
+      type="text" 
+      name="q" 
+      class="search-input" 
+      placeholder="Search name or email..." 
+      value="<%= searchQuery %>"
+    >
+    <button type="submit" class="btn btn-secondary btn-sm">Search</button>
+    <% if (searchQuery) { %>
+      <a href="/admin?filter=<%= currentFilter %>" class="btn btn-secondary btn-sm">Clear</a>
+    <% } %>
+  </form>
+</div>

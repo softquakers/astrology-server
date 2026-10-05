@@ -1,0 +1,6 @@
+<% if (alert) { %>
+  <div class="alert alert-<%= alert.type %>">
+    <span><%= alert.message %></span>
+    <button onclick="this.parentElement.style.display='none'" style="background:none;border:none;color:currentColor;cursor:pointer;font-size:1.1rem;">&times;</button>
+  </div>
+<% } %>

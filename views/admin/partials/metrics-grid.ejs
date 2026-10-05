@@ -1,0 +1,53 @@
+<div class="metrics-grid">
+  <!-- CARD 1: Total Users Signed Up -->
+  <div class="metric-card total">
+    <div class="metric-header">
+      <span class="metric-label">Signed Up Users</span>
+      <div class="metric-icon">👥</div>
+    </div>
+    <div class="metric-value"><%= stats.totalUsers %></div>
+    <div class="metric-footer">
+      <span>All registered profiles</span>
+      <span class="metric-highlight"><%= stats.totalCharts %> charts calculated</span>
+    </div>
+  </div>
+
+  <!-- CARD 2: Subscribed Users -->
+  <div class="metric-card subscribed">
+    <div class="metric-header">
+      <span class="metric-label">Subscribed (Paid)</span>
+      <div class="metric-icon">💎</div>
+    </div>
+    <div class="metric-value"><%= stats.subscribedUsers %></div>
+    <div class="metric-footer">
+      <span>Paid MRR</span>
+      <span class="metric-highlight" style="color: #34d399;">$<%= stats.mrr %>/mo</span>
+    </div>
+  </div>
+
+  <!-- CARD 3: Unpaid Monthly Users -->
+  <div class="metric-card unpaid">
+    <div class="metric-header">
+      <span class="metric-label">Unpaid Monthly Fee</span>
+      <div class="metric-icon">⚠️</div>
+    </div>
+    <div class="metric-value"><%= stats.unpaidUsers %></div>
+    <div class="metric-footer">
+      <span>Overdue Fee Amount</span>
+      <span class="metric-highlight" style="color: #f87171;">$<%= stats.unpaidRevenue %></span>
+    </div>
+  </div>
+
+  <!-- CARD 4: Free Tier Users -->
+  <div class="metric-card free">
+    <div class="metric-header">
+      <span class="metric-label">Free Tier Accounts</span>
+      <div class="metric-icon">🌱</div>
+    </div>
+    <div class="metric-value"><%= stats.freeUsers %></div>
+    <div class="metric-footer">
+      <span>Paid Conversion</span>
+      <span class="metric-highlight" style="color: var(--gold);"><%= stats.paidRate %>%</span>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,30 @@
+<header class="navbar">
+  <a href="/admin" class="brand">
+    <span class="brand-badge">✨</span>
+    <span>Astro Reports Admin</span>
+  </a>
+  
+  <div class="nav-actions">
+    <% if (dbConnected) { %>
+      <span class="status-badge connected" title="MongoDB Connected to <%= dbStatus.name %>">
+        <span class="status-dot"></span>
+        <span>MongoDB Live</span>
+      </span>
+    <% } else { %>
+      <span class="status-badge disconnected" title="MongoDB Disconnected">
+        <span class="status-dot"></span>
+        <span>DB Offline</span>
+      </span>
+    <% } %>
+
+    <form action="/admin/seed" method="POST" style="display:inline;">
+      <button type="submit" class="btn btn-secondary btn-sm" title="Populate demo users with various payment statuses">
+        🌱 Seed Demo Data
+      </button>
+    </form>
+
+    <a href="http://localhost:3000" target="_blank" class="btn btn-gold btn-sm">
+      📱 Open Client App ↗
+    </a>
+  </div>
+</header>

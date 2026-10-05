@@ -1,0 +1,36 @@
+<div class="ratio-bar-wrapper">
+  <div class="ratio-bar-header">
+    <span style="font-weight: 600; color: var(--text);">Subscription Distribution</span>
+    <span style="color: var(--text-muted); font-size: 0.8rem;">
+      <%= stats.subscribedUsers %> Paid &bull; <%= stats.unpaidUsers %> Unpaid &bull; <%= stats.freeUsers %> Free
+    </span>
+  </div>
+
+  <% 
+    const total = stats.totalUsers || 1;
+    const paidPct = Math.round((stats.subscribedUsers / total) * 100);
+    const unpaidPct = Math.round((stats.unpaidUsers / total) * 100);
+    const freePct = 100 - paidPct - unpaidPct;
+  %>
+
+  <div class="ratio-bar">
+    <div class="ratio-seg paid" style="width: <%= paidPct %>%;" title="Paid Subscribers: <%= paidPct %>%"></div>
+    <div class="ratio-seg unpaid" style="width: <%= unpaidPct %>%;" title="Unpaid Monthly: <%= unpaidPct %>%"></div>
+    <div class="ratio-seg free" style="width: <%= freePct %>%;" title="Free Tier: <%= freePct %>%"></div>
+  </div>
+
+  <div class="ratio-legend">
+    <div class="legend-item">
+      <span class="legend-dot" style="background:#10b981;"></span>
+      <span>Active Paid Subscribers (<%= paidPct %>%)</span>
+    </div>
+    <div class="legend-item">
+      <span class="legend-dot" style="background:#ef4444;"></span>
+      <span>Unpaid Monthly Fees (<%= unpaidPct %>%)</span>
+    </div>
+    <div class="legend-item">
+      <span class="legend-dot" style="background:var(--gold);"></span>
+      <span>Free Tier (<%= freePct %>%)</span>
+    </div>
+  </div>
+</div>
