@@ -1,9 +1,23 @@
 import { Router } from "express";
-import { createChart } from "../controllers/chartController.js";
+import {
+  createChart,
+  getSavedCharts,
+  getChartById,
+  deleteChartById,
+} from "../controllers/chartController.js";
 
 const router = Router();
 
-// POST /api/chart
+// POST /api/chart - Calculate chart (and persist to MongoDB if connected)
 router.post("/", createChart);
+
+// GET /api/chart - Retrieve saved charts (optional ?email=query)
+router.get("/", getSavedCharts);
+
+// GET /api/chart/:id - Retrieve specific saved chart
+router.get("/:id", getChartById);
+
+// DELETE /api/chart/:id - Delete specific saved chart
+router.delete("/:id", deleteChartById);
 
 export default router;

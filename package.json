@@ -10,7 +10,12 @@
     "start": "node dist/index.js",
     "test": "tsx test/api.test.ts"
   },
-  "keywords": ["express", "astrology", "ephemeris", "pwa"],
+  "keywords": [
+    "express",
+    "astrology",
+    "ephemeris",
+    "pwa"
+  ],
   "author": "",
   "license": "ISC",
   "dependencies": {
@@ -20,6 +25,7 @@
     "express": "^4.21.2",
     "geo-tz": "^8.1.0",
     "luxon": "^3.5.0",
+    "mongoose": "^9.10.4",
     "morgan": "^1.10.0"
   },
   "devDependencies": {

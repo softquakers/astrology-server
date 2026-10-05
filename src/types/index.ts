@@ -14,6 +14,8 @@ export interface ChartData {
 
 export interface ChartResponse extends ChartData {
   tz: string;
+  id?: string;
+  saved?: boolean;
 }
 
 export interface ChartRequestBody {
@@ -21,6 +23,10 @@ export interface ChartRequestBody {
   time: string;
   lat: number;
   lon: number;
+  name?: string;
+  email?: string;
+  place?: string;
+  save?: boolean;
 }
 
 export interface GeoResponse {

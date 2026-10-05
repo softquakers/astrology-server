@@ -10,6 +10,7 @@ A modular, TypeScript-powered Express backend application built to support the *
 - **Geocoding & Caching**: Reverse geocodes place queries using OpenStreetMap Nominatim with in-memory caching to avoid rate limits.
 - **Timezone Detection**: Automatically identifies geographic IANA timezones using `geo-tz` and `luxon`.
 - **Zodiac & Horoscope APIs**: Includes metadata for all 12 astrological signs and daily horoscope forecasts.
+- **MongoDB & Mongoose Integration**: Persistent storage for birth chart records and user profiles with connection pooling, graceful shutdown, and diagnostic status reporting.
 - **CORS & Security**: Configured with CORS for seamless client communication from `http://localhost:3000`.
 
 ---
@@ -150,3 +151,5 @@ Configure via `.env`:
 | `PORT` | `5000` | Port on which the Express server listens |
 | `NODE_ENV` | `development` | Environment mode (`development` or `production`) |
 | `CLIENT_ORIGIN` | `http://localhost:3000` | Allowed CORS origin for the Next.js client |
+| `MONGODB_URI` | `mongodb://localhost:27017/astrology_db` | MongoDB connection URI (local or MongoDB Atlas) |
+| `MONGODB_DB_NAME` | `astrology_db` | Target database name |
