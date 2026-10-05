@@ -10,8 +10,22 @@ async function runTests() {
       // 1. Root route
       const rootRes = await fetch(`http://localhost:${testPort}/`);
       if (rootRes.status !== 200) throw new Error(`GET / failed: ${rootRes.status}`);
+      const rootJson = (await rootRes.json()) as any;
+      if (rootJson.endpoints?.admin !== "/admin") {
+        throw new Error("Missing admin endpoint in GET /");
+      }
+      console.log("✓ Root route verified, admin listed at /admin");
 
-      // 2. Health check with MongoDB status reporting
+      // 2. EJS Admin Dashboard
+      const adminRes = await fetch(`http://localhost:${testPort}/admin`);
+      if (adminRes.status !== 200) throw new Error(`GET /admin failed: ${adminRes.status}`);
+      const adminHtml = await adminRes.text();
+      if (!adminHtml.includes("Astro Reports Admin") || !adminHtml.includes("Signed Up Users")) {
+        throw new Error("GET /admin did not render expected EJS dashboard markup");
+      }
+      console.log("✓ EJS Admin Dashboard rendered successfully");
+
+      // 3. Health check with MongoDB status reporting
       const healthRes = await fetch(`http://localhost:${testPort}/api/health`);
       if (healthRes.status !== 200) throw new Error(`GET /api/health failed: ${healthRes.status}`);
       const healthJson = (await healthRes.json()) as any;
@@ -20,7 +34,7 @@ async function runTests() {
       }
       console.log("✓ Health check verified with DB status:", healthJson.database.state);
 
-      // 3. Chart calculation
+      // 4. Chart calculation
       const chartRes = await fetch(`http://localhost:${testPort}/api/chart`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -40,15 +54,15 @@ async function runTests() {
       }
       console.log("✓ Chart calculation verified:", chart.asc, `(tz: ${chart.tz})`);
 
-      // 4. Zodiac lookup
+      // 5. Zodiac lookup
       const zodiacRes = await fetch(`http://localhost:${testPort}/api/zodiac/Scorpio`);
       if (zodiacRes.status !== 200) throw new Error(`GET /api/zodiac/Scorpio failed: ${zodiacRes.status}`);
 
-      // 5. Geocoding
+      // 6. Geocoding
       const geoRes = await fetch(`http://localhost:${testPort}/api/geo?q=Paris`);
       if (geoRes.status !== 200) throw new Error(`GET /api/geo failed: ${geoRes.status}`);
 
-      console.log(" All server endpoint and MongoDB-aware tests passed successfully!");
+      console.log(" All server endpoint, EJS dashboard, and MongoDB-aware tests passed successfully!");
       process.exit(0);
     } catch (err) {
       console.error("Test failure:", err);

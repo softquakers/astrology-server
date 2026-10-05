@@ -1,12 +1,32 @@
 import express, { Express, Request, Response } from "express";
+import path from "path";
+import fs from "fs";
+import { fileURLToPath } from "url";
 import cors from "cors";
 import morgan from "morgan";
 import apiRouter from "./routes/index.js";
+import adminRouter from "./routes/adminRoutes.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { config } from "./config/index.js";
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 export function createApp(): Express {
   const app = express();
+
+  // Resolve views folder robustly for both dev (src) and production (dist)
+  const localViews = path.resolve(__dirname, "../views");
+  const cwdViews = path.resolve(process.cwd(), "views");
+  const subfolderViews = path.resolve(process.cwd(), "astrology-server/views");
+  const viewsPath = fs.existsSync(localViews)
+    ? localViews
+    : fs.existsSync(cwdViews)
+    ? cwdViews
+    : subfolderViews;
+
+  app.set("view engine", "ejs");
+  app.set("views", viewsPath);
 
   // CORS configuration allowing requests from client UI
   app.use(
@@ -14,7 +34,7 @@ export function createApp(): Express {
       origin: (origin, callback) => {
         // Allow requests with no origin (e.g. mobile apps, curl, server-to-server)
         if (!origin) return callback(null, true);
-        
+
         // In development or if origin matches clientOrigin / localhost, allow it
         if (
           config.nodeEnv === "development" ||
@@ -36,7 +56,7 @@ export function createApp(): Express {
   // Request logging
   app.use(morgan(config.nodeEnv === "development" ? "dev" : "combined"));
 
-  // Body parsing middleware
+  // Body parsing middleware (JSON + URL-encoded forms for EJS)
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
@@ -47,6 +67,7 @@ export function createApp(): Express {
       status: "online",
       version: "1.0.0",
       endpoints: {
+        admin: "/admin",
         health: "/api/health",
         geo: "/api/geo?q={place}",
         chart: "POST /api/chart",
@@ -55,6 +76,9 @@ export function createApp(): Express {
       },
     });
   });
+
+  // Mount Admin Dashboard at /admin
+  app.use("/admin", adminRouter);
 
   // Mount API endpoints under /api
   app.use("/api", apiRouter);
