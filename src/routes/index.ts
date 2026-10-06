@@ -2,6 +2,7 @@ import { Router, Request, Response } from "express";
 import geoRoutes from "./geoRoutes.js";
 import chartRoutes from "./chartRoutes.js";
 import zodiacRoutes from "./zodiacRoutes.js";
+import userRoutes from "./userRoutes.js";
 import { getDatabaseStatus } from "../config/database.js";
 
 const apiRouter = Router();
@@ -21,5 +22,6 @@ apiRouter.get("/health", (_req: Request, res: Response) => {
 apiRouter.use("/geo", geoRoutes);
 apiRouter.use("/chart", chartRoutes);
 apiRouter.use("/zodiac", zodiacRoutes);
+apiRouter.use("/users", userRoutes);
 
 export default apiRouter;

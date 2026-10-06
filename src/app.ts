@@ -69,6 +69,7 @@ export function createApp(): Express {
       endpoints: {
         admin: "/admin",
         health: "/api/health",
+        signup: "POST /api/users/signup",
         geo: "/api/geo?q={place}",
         chart: "POST /api/chart",
         zodiac: "/api/zodiac",
