@@ -15,6 +15,7 @@ const READY_STATES: Record<number, string> = {
  */
 export async function connectDatabase(): Promise<boolean> {
   const uri = config.mongodb.uri;
+  console.log(config.mongodb)
 
   try {
     // Avoid re-connecting if already connected or connecting

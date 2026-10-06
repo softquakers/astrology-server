@@ -9,6 +9,6 @@ export const config = {
   userAgent: process.env.USER_AGENT || "astro-pwa-server/1.0",
   mongodb: {
     uri: process.env.MONGODB_URI || "mongodb://localhost:27017/astrology_db",
-    dbName: process.env.MONGODB_DB_NAME || "astrology_db",
+    dbName: process.env.MONGODB_DB_NAME || "astrologydb",
   },
 };
