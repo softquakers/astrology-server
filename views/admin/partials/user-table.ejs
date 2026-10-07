@@ -17,12 +17,21 @@
           <tr>
             <td>
               <div class="user-info">
-                <div class="user-avatar">
-                  <%= (u.name || u.email).charAt(0).toUpperCase() %>
-                </div>
+                <% if (u.photoUrl) { %>
+                  <img src="<%= u.photoUrl %>" class="user-avatar" style="width:36px;height:36px;object-fit:cover;border-radius:50%;border:1px solid #e8b86b;" alt="avatar" />
+                <% } else { %>
+                  <div class="user-avatar">
+                    <%= (u.name || u.email).charAt(0).toUpperCase() %>
+                  </div>
+                <% } %>
                 <div class="user-details">
                   <div class="user-name"><%= u.name || "Anonymous Celestial" %></div>
                   <div class="user-email"><%= u.email %></div>
+                  <% if (u.dob) { %>
+                    <div style="font-size: 0.72rem; color: #a59fc8; margin-top: 2px;">
+                      🎂 <%= u.dob %><% if (u.birthPlace) { %> • 📍 <%= u.birthPlace %><% } %>
+                    </div>
+                  <% } %>
                 </div>
               </div>
             </td>

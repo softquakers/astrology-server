@@ -7,6 +7,10 @@ export interface IUser extends Document {
   email: string;
   name?: string;
   photoUrl?: string;
+  dob?: string;
+  birthTime?: string;
+  birthPlace?: string;
+  googleId?: string;
   isPremium: boolean;
   subscriptionStatus: SubscriptionStatus;
   subscriptionPlan: SubscriptionPlan;
@@ -33,6 +37,26 @@ const UserSchema = new Schema<IUser>(
       default: "",
     },
     photoUrl: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    dob: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    birthTime: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    birthPlace: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    googleId: {
       type: String,
       trim: true,
       default: "",
