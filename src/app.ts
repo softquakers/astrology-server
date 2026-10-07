@@ -57,8 +57,8 @@ export function createApp(): Express {
   app.use(morgan(config.nodeEnv === "development" ? "dev" : "combined"));
 
   // Body parsing middleware (JSON + URL-encoded forms for EJS)
-  app.use(express.json());
-  app.use(express.urlencoded({ extended: true }));
+  app.use(express.json({ limit: "10mb" }));
+  app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
   // Root welcome / info
   app.get("/", (_req: Request, res: Response) => {
