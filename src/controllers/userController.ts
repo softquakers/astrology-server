@@ -10,6 +10,7 @@ export interface SignUpRequestBody {
   birthTime?: string;
   birthPlace?: string;
   googleId?: string;
+  googleAuthBday?: string;
 }
 
 export interface GoogleAuthRequestBody {
@@ -20,12 +21,22 @@ export interface GoogleAuthRequestBody {
   dob?: string;
   birthTime?: string;
   birthPlace?: string;
+  googleAuthBday?: string;
+  birthday?: string;
+  birthdate?: string;
 }
 
 /**
  * Safely decodes a Google JWT credential without external crypto dependency.
  */
-function decodeGoogleJwt(token: string): { email?: string; name?: string; picture?: string; sub?: string } | null {
+function decodeGoogleJwt(token: string): {
+  email?: string;
+  name?: string;
+  picture?: string;
+  sub?: string;
+  birthdate?: string;
+  birthday?: string;
+} | null {
   try {
     const parts = token.split(".");
     if (parts.length < 2) return null;
@@ -48,7 +59,7 @@ export async function signUpUser(
   next: NextFunction
 ): Promise<void> {
   try {
-    const { email, name, photoUrl, dob, birthTime, birthPlace, googleId } = req.body;
+    const { email, name, photoUrl, dob, birthTime, birthPlace, googleId, googleAuthBday } = req.body;
 
     if (!email || typeof email !== "string" || !email.trim() || !email.includes("@")) {
       res.status(400).json({ error: "A valid email address is required to sign up" });
@@ -62,6 +73,7 @@ export async function signUpUser(
     const cleanBirthTime = typeof birthTime === "string" ? birthTime.trim() : "";
     const cleanBirthPlace = typeof birthPlace === "string" ? birthPlace.trim() : "";
     const cleanGoogleId = typeof googleId === "string" ? googleId.trim() : "";
+    const cleanGoogleAuthBday = typeof googleAuthBday === "string" ? googleAuthBday.trim() : "";
 
     // If database is not connected, provide a graceful fallback response
     if (!isDatabaseConnected()) {
@@ -76,6 +88,7 @@ export async function signUpUser(
           dob: cleanDob,
           birthTime: cleanBirthTime,
           birthPlace: cleanBirthPlace,
+          googleAuthBday: cleanGoogleAuthBday,
           subscriptionStatus: "free",
           subscriptionPlan: "free",
           isPremium: false,
@@ -96,6 +109,7 @@ export async function signUpUser(
         birthTime: cleanBirthTime,
         birthPlace: cleanBirthPlace,
         googleId: cleanGoogleId,
+        googleAuthBday: cleanGoogleAuthBday,
         subscriptionStatus: "free",
         subscriptionPlan: "free",
         monthlyFee: 0,
@@ -128,6 +142,10 @@ export async function signUpUser(
         user.googleId = cleanGoogleId;
         modified = true;
       }
+      if (cleanGoogleAuthBday && user.googleAuthBday !== cleanGoogleAuthBday) {
+        user.googleAuthBday = cleanGoogleAuthBday;
+        modified = true;
+      }
       if (modified) {
         await user.save();
       }
@@ -144,6 +162,7 @@ export async function signUpUser(
         dob: user.dob,
         birthTime: user.birthTime,
         birthPlace: user.birthPlace,
+        googleAuthBday: user.googleAuthBday,
         subscriptionStatus: user.subscriptionStatus,
         subscriptionPlan: user.subscriptionPlan,
         isPremium: user.isPremium,
@@ -164,12 +183,13 @@ export async function googleAuth(
   next: NextFunction
 ): Promise<void> {
   try {
-    const { credential, email, name, photoUrl, dob, birthTime, birthPlace } = req.body;
+    const { credential, email, name, photoUrl, dob, birthTime, birthPlace, googleAuthBday, birthday, birthdate } = req.body;
 
     let targetEmail = email;
     let targetName = name;
     let targetPhoto = photoUrl;
     let targetGoogleId = "";
+    let targetGoogleBday = googleAuthBday || birthday || birthdate || "";
 
     // Parse Google JWT if provided
     if (credential && typeof credential === "string") {
@@ -179,6 +199,8 @@ export async function googleAuth(
         if (decoded.name) targetName = decoded.name;
         if (decoded.picture) targetPhoto = decoded.picture;
         if (decoded.sub) targetGoogleId = decoded.sub;
+        if (decoded.birthdate && !targetGoogleBday) targetGoogleBday = decoded.birthdate;
+        if (decoded.birthday && !targetGoogleBday) targetGoogleBday = decoded.birthday;
       }
     }
 
@@ -193,6 +215,7 @@ export async function googleAuth(
     const cleanDob = typeof dob === "string" ? dob.trim() : "";
     const cleanBirthTime = typeof birthTime === "string" ? birthTime.trim() : "";
     const cleanBirthPlace = typeof birthPlace === "string" ? birthPlace.trim() : "";
+    const cleanGoogleAuthBday = typeof targetGoogleBday === "string" ? targetGoogleBday.trim() : "";
 
     if (!isDatabaseConnected()) {
       res.status(200).json({
@@ -206,6 +229,7 @@ export async function googleAuth(
           dob: cleanDob,
           birthTime: cleanBirthTime,
           birthPlace: cleanBirthPlace,
+          googleAuthBday: cleanGoogleAuthBday,
           subscriptionStatus: "free",
           subscriptionPlan: "free",
           isPremium: false,
@@ -225,6 +249,7 @@ export async function googleAuth(
         birthTime: cleanBirthTime,
         birthPlace: cleanBirthPlace,
         googleId: targetGoogleId,
+        googleAuthBday: cleanGoogleAuthBday,
         subscriptionStatus: "free",
         subscriptionPlan: "free",
         monthlyFee: 0,
@@ -256,6 +281,10 @@ export async function googleAuth(
         user.googleId = targetGoogleId;
         modified = true;
       }
+      if (cleanGoogleAuthBday && user.googleAuthBday !== cleanGoogleAuthBday) {
+        user.googleAuthBday = cleanGoogleAuthBday;
+        modified = true;
+      }
       if (modified) {
         await user.save();
       }
@@ -272,6 +301,7 @@ export async function googleAuth(
         dob: user.dob,
         birthTime: user.birthTime,
         birthPlace: user.birthPlace,
+        googleAuthBday: user.googleAuthBday,
         subscriptionStatus: user.subscriptionStatus,
         subscriptionPlan: user.subscriptionPlan,
         isPremium: user.isPremium,
@@ -318,6 +348,7 @@ export async function getUserByEmail(
       dob: user.dob,
       birthTime: user.birthTime,
       birthPlace: user.birthPlace,
+      googleAuthBday: (user as any).googleAuthBday || "",
       subscriptionStatus: user.subscriptionStatus,
       subscriptionPlan: user.subscriptionPlan,
       isPremium: user.isPremium,

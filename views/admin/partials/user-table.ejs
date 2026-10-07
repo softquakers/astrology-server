@@ -32,6 +32,11 @@
                       🎂 <%= u.dob %><% if (u.birthPlace) { %> • 📍 <%= u.birthPlace %><% } %>
                     </div>
                   <% } %>
+                  <% if (u.googleAuthBday) { %>
+                    <div style="font-size: 0.70rem; color: #e8b86b; margin-top: 2px;">
+                      ✨ Google Bday: <%= u.googleAuthBday %>
+                    </div>
+                  <% } %>
                 </div>
               </div>
             </td>

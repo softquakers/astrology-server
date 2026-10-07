@@ -11,6 +11,7 @@ export interface IUser extends Document {
   birthTime?: string;
   birthPlace?: string;
   googleId?: string;
+  googleAuthBday?: string;
   isPremium: boolean;
   subscriptionStatus: SubscriptionStatus;
   subscriptionPlan: SubscriptionPlan;
@@ -57,6 +58,11 @@ const UserSchema = new Schema<IUser>(
       default: "",
     },
     googleId: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    googleAuthBday: {
       type: String,
       trim: true,
       default: "",
