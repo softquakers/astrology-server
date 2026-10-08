@@ -1,11 +1,12 @@
 import mongoose, { Document, Schema, Model } from "mongoose";
 
 export type SubscriptionStatus = "active" | "unpaid" | "past_due" | "canceled" | "free";
-export type SubscriptionPlan = "monthly" | "yearly" | "free";
+export type SubscriptionPlan = "monthly" | "three_month" | "quarterly" | "yearly" | "free";
 
 export interface IUser extends Document {
   email: string;
   name?: string;
+  phone?: string;
   photoUrl?: string;
   dob?: string;
   birthTime?: string;
@@ -19,6 +20,9 @@ export interface IUser extends Document {
   lastPaymentDate?: Date | null;
   nextBillingDate?: Date | null;
   paymentMethod?: string;
+  razorpaySubscriptionId?: string;
+  razorpayPaymentId?: string;
+  razorpayPlanId?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -67,6 +71,11 @@ const UserSchema = new Schema<IUser>(
       trim: true,
       default: "",
     },
+    phone: {
+      type: String,
+      trim: true,
+      default: "",
+    },
     isPremium: {
       type: Boolean,
       default: false,
@@ -80,7 +89,7 @@ const UserSchema = new Schema<IUser>(
     },
     subscriptionPlan: {
       type: String,
-      enum: ["monthly", "yearly", "free"],
+      enum: ["monthly", "three_month", "quarterly", "yearly", "free"],
       default: "free",
     },
     monthlyFee: {
@@ -97,7 +106,19 @@ const UserSchema = new Schema<IUser>(
     },
     paymentMethod: {
       type: String,
-      default: "credit_card",
+      default: "upi_autopay",
+    },
+    razorpaySubscriptionId: {
+      type: String,
+      default: "",
+    },
+    razorpayPaymentId: {
+      type: String,
+      default: "",
+    },
+    razorpayPlanId: {
+      type: String,
+      default: "",
     },
   },
   {

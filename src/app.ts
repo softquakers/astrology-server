@@ -77,9 +77,13 @@ export function createApp(): Express {
         chart: "POST /api/chart",
         zodiac: "/api/zodiac",
         horoscope: "/api/zodiac/:sign/horoscope",
+        subscriptions: "/api/subscriptions/plans",
+        createSubscription: "POST /api/subscriptions/create",
+        verifySubscription: "POST /api/subscriptions/verify",
       },
     });
   });
+
 
   // Mount Admin Dashboard at /admin
   app.use("/admin", adminRouter);

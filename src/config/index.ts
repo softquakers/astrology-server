@@ -19,4 +19,15 @@ export const config = {
     folderName: process.env.R2_FOLDER_NAME || "astro-users",
     publicUrl: process.env.R2_PUBLIC_URL || "",
   },
+  razorpay: {
+    keyId: process.env.RAZORPAY_KEY_ID || "",
+    keySecret: process.env.RAZORPAY_KEY_SECRET || "",
+    webhookSecret: process.env.RAZORPAY_WEBHOOK_SECRET || "",
+    planMonthlyId: process.env.RAZORPAY_PLAN_MONTHLY_ID || "",
+    planThreeMonthId: process.env.RAZORPAY_PLAN_THREE_MONTH_ID || "",
+    get isConfigured(): boolean {
+      return Boolean(this.keyId.trim() && this.keySecret.trim());
+    },
+  },
 };
+

@@ -141,10 +141,15 @@ export async function postCreateUser(
     }
 
     const cleanEmail = email.toLowerCase().trim();
-    const fee = parseFloat(monthlyFee) || (subscriptionStatus === "active" || subscriptionStatus === "unpaid" ? 9.99 : 0);
+    const defaultFee = subscriptionPlan === "three_month" ? 299 : 149;
+    const fee = parseFloat(monthlyFee) || (subscriptionStatus === "active" || subscriptionStatus === "unpaid" ? defaultFee : 0);
     const now = new Date();
-    const nextMonth = new Date();
-    nextMonth.setMonth(nextMonth.getMonth() + 1);
+    const nextBilling = new Date();
+    if (subscriptionPlan === "three_month") {
+      nextBilling.setMonth(nextBilling.getMonth() + 3);
+    } else {
+      nextBilling.setMonth(nextBilling.getMonth() + 1);
+    }
 
     await User.findOneAndUpdate(
       { email: cleanEmail },
@@ -156,7 +161,7 @@ export async function postCreateUser(
         subscriptionPlan: subscriptionPlan || "monthly",
         monthlyFee: fee,
         lastPaymentDate: subscriptionStatus === "active" ? now : null,
-        nextBillingDate: subscriptionStatus === "active" || subscriptionStatus === "unpaid" ? nextMonth : null,
+        nextBillingDate: subscriptionStatus === "active" || subscriptionStatus === "unpaid" ? nextBilling : null,
       },
       { upsert: true, new: true }
     );
@@ -194,16 +199,18 @@ export async function postUpdateSubscription(
     const nextMonth = new Date();
     nextMonth.setMonth(nextMonth.getMonth() + 1);
 
+    const defaultPlanFee = user.subscriptionPlan === "three_month" ? 299 : 149;
+
     if (action === "mark_paid") {
       user.subscriptionStatus = "active";
       user.isPremium = true;
-      user.monthlyFee = user.monthlyFee || 9.99;
+      user.monthlyFee = user.monthlyFee || defaultPlanFee;
       user.lastPaymentDate = now;
       user.nextBillingDate = nextMonth;
     } else if (action === "mark_unpaid") {
       user.subscriptionStatus = "unpaid";
       user.isPremium = false;
-      user.monthlyFee = user.monthlyFee || 9.99;
+      user.monthlyFee = user.monthlyFee || defaultPlanFee;
     } else if (action === "set_free") {
       user.subscriptionStatus = "free";
       user.isPremium = false;
