@@ -5,6 +5,7 @@ import { calculateChart } from "../services/astroService.js";
 import { ChartRequestBody, ChartResponse } from "../types/index.js";
 import { ChartRecord } from "../models/ChartRecord.js";
 import { isDatabaseConnected } from "../config/database.js";
+import { buildFullAstrologicalReading } from "../services/openaiService.js";
 
 /**
  * Calculates birth chart and optionally persists to MongoDB when connected.
@@ -172,6 +173,39 @@ export async function deleteChartById(
     }
 
     res.json({ success: true, message: `Chart '${id}' deleted successfully` });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * Generates an astrological reading for a querent's question using ChatGPT (OpenAI)
+ * with the direct answer appended as the first part of the response.
+ */
+export async function askChartQuestion(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const { question, name, chart, customApiKey } = req.body;
+
+    if (!question || typeof question !== "string" || !question.trim()) {
+      res.status(400).json({ error: "Question is required" });
+      return;
+    }
+
+    const answer = await buildFullAstrologicalReading({
+      question: question.trim(),
+      querentName: name && typeof name === "string" ? name.trim() : "Querent",
+      chart: chart || {},
+      customApiKey: customApiKey && typeof customApiKey === "string" ? customApiKey.trim() : undefined,
+    });
+
+    res.json({
+      success: true,
+      answer,
+    });
   } catch (err) {
     next(err);
   }

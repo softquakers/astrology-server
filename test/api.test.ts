@@ -62,6 +62,23 @@ async function runTests() {
       const geoRes = await fetch(`http://localhost:${testPort}/api/geo?q=Paris`);
       if (geoRes.status !== 200) throw new Error(`GET /api/geo failed: ${geoRes.status}`);
 
+      // 7. ChatGPT Astrological Question Answering
+      const askRes = await fetch(`http://localhost:${testPort}/api/chart/ask`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          question: "when i get married",
+          name: "Rakesh Krishnan",
+          chart: chart,
+        }),
+      });
+      if (askRes.status !== 200) throw new Error(`POST /api/chart/ask failed: ${askRes.status}`);
+      const askData = (await askRes.json()) as any;
+      if (!askData.success || !askData.answer || !askData.answer.aiAnswer) {
+        throw new Error("POST /api/chart/ask returned invalid response structure");
+      }
+      console.log(`✓ ChatGPT AI reading verified: "${askData.answer.aiAnswer.slice(0, 60)}..."`);
+
       console.log(" All server endpoint, EJS dashboard, and MongoDB-aware tests passed successfully!");
       process.exit(0);
     } catch (err) {

@@ -4,9 +4,13 @@ import {
   getSavedCharts,
   getChartById,
   deleteChartById,
+  askChartQuestion,
 } from "../controllers/chartController.js";
 
 const router = Router();
+
+// POST /api/chart/ask - Generate ChatGPT AI astrological answer to querent question
+router.post("/ask", askChartQuestion);
 
 // POST /api/chart - Calculate chart (and persist to MongoDB if connected)
 router.post("/", createChart);

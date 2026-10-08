@@ -29,5 +29,12 @@ export const config = {
       return Boolean(this.keyId.trim() && this.keySecret.trim());
     },
   },
+  openai: {
+    apiKey: (process.env.OPENAI_API_KEY || process.env.CHATGPT_API_KEY || "").trim(),
+    model: process.env.OPENAI_MODEL || "gpt-4o-mini",
+    get isConfigured(): boolean {
+      return Boolean(this.apiKey.trim());
+    },
+  },
 };
 
