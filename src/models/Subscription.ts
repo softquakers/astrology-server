@@ -17,7 +17,20 @@ export interface ISubscription extends Document {
   currency: string;
   interval: string;
   intervals: number;
-  status: "INITIALIZED" | "BANK_APPROVAL_PENDING" | "ACTIVE" | "ON_HOLD" | "PAUSED" | "CANCELLED" | "COMPLETED" | "FAILED";
+  status:
+    | "INITIALIZED"
+    | "CREATED"
+    | "AUTHENTICATED"
+    | "BANK_APPROVAL_PENDING"
+    | "PENDING"
+    | "ACTIVE"
+    | "ON_HOLD"
+    | "PAUSED"
+    | "HALTED"
+    | "EXPIRED"
+    | "CANCELLED"
+    | "COMPLETED"
+    | "FAILED";
   paymentMethod: string;
   authLink?: string;
   sessionId?: string;
@@ -100,10 +113,15 @@ const SubscriptionSchema = new Schema<ISubscription>(
       type: String,
       enum: [
         "INITIALIZED",
+        "CREATED",
+        "AUTHENTICATED",
         "BANK_APPROVAL_PENDING",
+        "PENDING",
         "ACTIVE",
         "ON_HOLD",
         "PAUSED",
+        "HALTED",
+        "EXPIRED",
         "CANCELLED",
         "COMPLETED",
         "FAILED",
