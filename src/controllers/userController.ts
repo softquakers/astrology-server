@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { User } from "../models/User.js";
 import { isDatabaseConnected } from "../config/database.js";
+import { uploadPhotographToR2, isBase64Image } from "../services/r2Service.js";
 
 export interface SignUpRequestBody {
   email: string;
@@ -68,7 +69,20 @@ export async function signUpUser(
 
     const cleanEmail = email.toLowerCase().trim();
     const cleanName = typeof name === "string" ? name.trim() : "";
-    const cleanPhoto = typeof photoUrl === "string" ? photoUrl.trim() : "";
+    let cleanPhoto = typeof photoUrl === "string" ? photoUrl.trim() : "";
+    if (cleanPhoto && isBase64Image(cleanPhoto)) {
+      try {
+        const uploadResult = await uploadPhotographToR2({
+          data: cleanPhoto,
+          userEmail: cleanEmail,
+        });
+        if (uploadResult && uploadResult.url) {
+          cleanPhoto = uploadResult.url;
+        }
+      } catch (uploadErr) {
+        console.warn("[Cloudflare R2] Photo upload error in signUpUser:", uploadErr);
+      }
+    }
     const cleanDob = typeof dob === "string" ? dob.trim() : "";
     const cleanBirthTime = typeof birthTime === "string" ? birthTime.trim() : "";
     const cleanBirthPlace = typeof birthPlace === "string" ? birthPlace.trim() : "";
@@ -211,7 +225,20 @@ export async function googleAuth(
 
     const cleanEmail = targetEmail.toLowerCase().trim();
     const cleanName = typeof targetName === "string" ? targetName.trim() : "";
-    const cleanPhoto = typeof targetPhoto === "string" ? targetPhoto.trim() : "";
+    let cleanPhoto = typeof targetPhoto === "string" ? targetPhoto.trim() : "";
+    if (cleanPhoto && isBase64Image(cleanPhoto)) {
+      try {
+        const uploadResult = await uploadPhotographToR2({
+          data: cleanPhoto,
+          userEmail: cleanEmail,
+        });
+        if (uploadResult && uploadResult.url) {
+          cleanPhoto = uploadResult.url;
+        }
+      } catch (uploadErr) {
+        console.warn("[Cloudflare R2] Photo upload error in googleAuth:", uploadErr);
+      }
+    }
     const cleanDob = typeof dob === "string" ? dob.trim() : "";
     const cleanBirthTime = typeof birthTime === "string" ? birthTime.trim() : "";
     const cleanBirthPlace = typeof birthPlace === "string" ? birthPlace.trim() : "";

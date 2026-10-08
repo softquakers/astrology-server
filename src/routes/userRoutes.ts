@@ -1,7 +1,12 @@
 import { Router } from "express";
 import { signUpUser, getUserByEmail, googleAuth } from "../controllers/userController.js";
+import { uploadPhoto } from "../controllers/photoController.js";
 
 const router = Router();
+
+// POST /api/users/upload-photo - Upload photograph to Cloudflare R2
+router.post("/upload-photo", uploadPhoto);
+router.post("/photo", uploadPhoto);
 
 // POST /api/users/signup - Sign up / register a user with DOB, photo, name
 router.post("/signup", signUpUser);
