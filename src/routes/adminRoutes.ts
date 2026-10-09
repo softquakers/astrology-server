@@ -6,6 +6,7 @@ import {
   postDeleteUser,
   postSeedDemoData,
 } from "../controllers/adminController.js";
+import { postSeedFunnel, postResetFunnel } from "../controllers/analyticsController.js";
 
 const router = Router();
 
@@ -23,5 +24,11 @@ router.post("/users/:id/delete", postDeleteUser);
 
 // POST /admin/seed - Seed demo users with varying subscription statuses
 router.post("/seed", postSeedDemoData);
+
+// POST /admin/funnel/seed - Seed demo funnel data
+router.post("/funnel/seed", postSeedFunnel);
+
+// POST /admin/funnel/reset - Reset funnel events
+router.post("/funnel/reset", postResetFunnel);
 
 export default router;

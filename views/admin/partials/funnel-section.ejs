@@ -1,0 +1,187 @@
+<div class="funnel-container" id="funnel-section">
+  <!-- FUNNEL SECTION HEADER -->
+  <div class="funnel-header">
+    <div class="funnel-title-area">
+      <div class="funnel-title-row">
+        <span class="funnel-icon-badge">📊</span>
+        <h2 class="funnel-heading">User Conversion &amp; Onboarding Funnel</h2>
+        <span class="funnel-live-pill">
+          <span class="pulse-dot"></span> Live Drop-Off Analytics
+        </span>
+      </div>
+      <p class="funnel-subheading">
+        Real-time pipeline tracking: <strong>Launched App</strong> &rarr; <strong>Entered Name</strong> &rarr; <strong>Took Photo</strong> &rarr; <strong>Entered DOB</strong> &rarr; <strong>Time of Birth</strong> &rarr; <strong>Subscribed</strong> &rarr; <strong>Attached to Screen</strong>
+      </p>
+    </div>
+
+    <div class="funnel-actions">
+      <form action="/admin/funnel/seed" method="POST" style="margin: 0; display: inline-block;">
+        <button type="submit" class="btn btn-secondary btn-sm" title="Generate realistic demo visitors across all funnel steps">
+          ✨ Seed Demo Funnel
+        </button>
+      </form>
+      <form action="/admin/funnel/reset" method="POST" onsubmit="return confirm('Reset all live funnel visitor events?');" style="margin: 0; display: inline-block;">
+        <button type="submit" class="btn btn-secondary btn-sm" style="color: #f87171;" title="Clear recorded funnel events">
+          🔄 Reset
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- FUNNEL QUICK SUMMARY KPI CARDS -->
+  <div class="funnel-kpi-grid">
+    <div class="funnel-kpi-card">
+      <div class="kpi-label">Total App Launches</div>
+      <div class="kpi-value" style="color: #a78bfa;"><%= funnel.totalLaunches || 0 %></div>
+      <div class="kpi-sub">Top of Funnel (100%)</div>
+    </div>
+    <div class="funnel-kpi-card">
+      <div class="kpi-label">Profile Completed (DOB+Time)</div>
+      <div class="kpi-value" style="color: #34d399;"><%= funnel.profileCompletionRate || 0 %>%</div>
+      <div class="kpi-sub"><%= funnel.tobCompleted || 0 %> / <%= funnel.totalLaunches || 0 %> visitors</div>
+    </div>
+    <div class="funnel-kpi-card">
+      <div class="kpi-label">Paid Subscriptions</div>
+      <div class="kpi-value" style="color: var(--gold);"><%= funnel.overallPaidRate || 0 %>%</div>
+      <div class="kpi-sub"><%= funnel.subscribedCount || 0 %> converted paying members</div>
+    </div>
+    <div class="funnel-kpi-card">
+      <div class="kpi-label">Attached to Home Screen</div>
+      <div class="kpi-value" style="color: #f472b6;"><%= funnel.overallAttachRate || 0 %>%</div>
+      <div class="kpi-sub"><%= funnel.attachedCount || 0 %> homescreen installs</div>
+    </div>
+  </div>
+
+  <!-- VISUAL FUNNEL PIPELINE CARDS -->
+  <div class="funnel-pipeline">
+    <% funnel.steps.forEach(function(step, idx) { %>
+      <div class="funnel-step-card" style="--accent: <%= step.accentColor %>;">
+        <div class="step-card-top">
+          <div class="step-badge" style="background: <%= step.badgeBg %>; color: <%= step.accentColor %>;">
+            <span class="step-number">#<%= step.stepNumber %></span>
+            <span class="step-emoji"><%= step.icon %></span>
+          </div>
+          <div class="step-retention-pill">
+            <% if (idx === 0) { %>
+              <span class="retention-pct" style="color: <%= step.accentColor %>;">100% Top</span>
+            <% } else { %>
+              <span class="retention-pct" style="color: <%= step.pctFromPrev >= 70 ? '#34d399' : (step.pctFromPrev >= 40 ? '#facc15' : '#f87171') %>;">
+                <%= step.pctFromPrev %>% retained
+              </span>
+            <% } %>
+          </div>
+        </div>
+
+        <div class="step-card-body">
+          <div class="step-name"><%= step.label %></div>
+          <div class="step-desc"><%= step.desc %></div>
+
+          <div class="step-stat-row">
+            <span class="step-count"><%= step.count %></span>
+            <span class="step-pct-total"><%= step.pctOfTotal %>% of launch</span>
+          </div>
+
+          <!-- Conversion Visual Progress Bar -->
+          <div class="funnel-bar-track">
+            <div
+              class="funnel-bar-fill"
+              style="width: <%= Math.max(step.pctOfTotal, step.count > 0 ? 6 : 0) %>%; background: <%= step.gradient %>;"
+              title="<%= step.label %>: <%= step.count %> visitors (<%= step.pctOfTotal %>%)"
+            ></div>
+          </div>
+
+          <% if (idx > 0) { %>
+            <div class="step-dropoff-meta">
+              <span class="dropoff-tag">
+                &minus;<%= step.dropoffPct %>% drop-off
+              </span>
+              <span class="dropoff-count">
+                (<%= step.dropoffCount %> lost)
+              </span>
+            </div>
+          <% } else { %>
+            <div class="step-dropoff-meta">
+              <span class="dropoff-tag" style="background: rgba(167, 139, 250, 0.15); color: #a78bfa; border-color: rgba(167, 139, 250, 0.3);">
+                Baseline (Entry)
+              </span>
+              <span class="dropoff-count">0 dropped</span>
+            </div>
+          <% } %>
+        </div>
+
+        <% if (idx < funnel.steps.length - 1) { %>
+          <div class="funnel-arrow-connector" aria-hidden="true">
+            <span>&rarr;</span>
+          </div>
+        <% } %>
+      </div>
+    <% }); %>
+  </div>
+
+  <!-- COMPREHENSIVE FUNNEL BREAKDOWN TABLE -->
+  <div class="funnel-table-wrapper">
+    <div class="funnel-table-title">Detailed Funnel Stage Breakdown</div>
+    <div style="overflow-x: auto;">
+      <table class="funnel-table">
+        <thead>
+          <tr>
+            <th>Step #</th>
+            <th>Stage</th>
+            <th>Description</th>
+            <th style="text-align: right;">Total Visitors</th>
+            <th style="text-align: right;">% of Launch</th>
+            <th style="text-align: right;">Retention from Prev</th>
+            <th style="text-align: right;">Drop-Off</th>
+            <th style="min-width: 140px;">Conversion Share</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% funnel.steps.forEach(function(s, i) { %>
+            <tr>
+              <td>
+                <span class="tbl-step-pill">#<%= s.stepNumber %></span>
+              </td>
+              <td>
+                <span class="tbl-stage-name">
+                  <span style="font-size: 1.1rem; margin-right: 0.35rem;"><%= s.icon %></span>
+                  <strong><%= s.label %></strong>
+                </span>
+              </td>
+              <td style="color: var(--text-muted); font-size: 0.8rem;">
+                <%= s.desc %>
+              </td>
+              <td style="text-align: right; font-weight: 700; font-size: 0.95rem; color: <%= s.accentColor %>;">
+                <%= s.count %>
+              </td>
+              <td style="text-align: right; font-weight: 600;">
+                <%= s.pctOfTotal %>%
+              </td>
+              <td style="text-align: right;">
+                <% if (i === 0) { %>
+                  <span style="color: var(--text-muted);">&mdash;</span>
+                <% } else { %>
+                  <span style="font-weight: 600; color: <%= s.pctFromPrev >= 70 ? '#34d399' : (s.pctFromPrev >= 40 ? '#facc15' : '#f87171') %>;">
+                    <%= s.pctFromPrev %>%
+                  </span>
+                <% } %>
+              </td>
+              <td style="text-align: right; color: var(--text-muted);">
+                <% if (i === 0) { %>
+                  <span>&mdash;</span>
+                <% } else { %>
+                  <span style="color: #f87171; font-weight: 600;">&minus;<%= s.dropoffPct %>%</span>
+                  <span style="font-size: 0.75rem;">(<%= s.dropoffCount %>)</span>
+                <% } %>
+              </td>
+              <td>
+                <div class="tbl-progress-track">
+                  <div class="tbl-progress-fill" style="width: <%= Math.max(s.pctOfTotal, s.count > 0 ? 5 : 0) %>%; background: <%= s.gradient %>;"></div>
+                </div>
+              </td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

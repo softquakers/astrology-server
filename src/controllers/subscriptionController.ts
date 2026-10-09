@@ -7,6 +7,7 @@ import {
   processRazorpayWebhook,
 } from "../services/razorpayService.js";
 import { Subscription } from "../models/Subscription.js";
+import { recordFunnelEvent } from "../services/funnelService.js";
 
 /**
  * GET /api/subscriptions/plans
@@ -93,6 +94,20 @@ export async function verifySubscription(
       signature: signature ? String(signature).trim() : undefined,
       emailHint: email ? String(email).trim() : undefined,
     });
+
+    if (result.success && result.isPremium) {
+      const cleanEmail = email ? String(email).trim().toLowerCase() : "";
+      await recordFunnelEvent({
+        step: "subscribed",
+        visitorId: cleanEmail || String(subscriptionId).trim(),
+        email: cleanEmail,
+        metadata: {
+          subscriptionId: String(subscriptionId).trim(),
+          paymentId: paymentId ? String(paymentId).trim() : undefined,
+          plan: result.subscriptionPlan,
+        },
+      });
+    }
 
     res.status(200).json(result);
   } catch (err) {

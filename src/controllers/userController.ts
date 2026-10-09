@@ -4,6 +4,7 @@ import { AppInstall } from "../models/AppInstall.js";
 import { isDatabaseConnected } from "../config/database.js";
 import { uploadPhotographToR2, isBase64Image } from "../services/r2Service.js";
 import { signUserToken, verifyUserToken } from "../services/authService.js";
+import { recordFunnelEvent } from "../services/funnelService.js";
 
 export interface SignUpRequestBody {
   email: string;
@@ -171,6 +172,20 @@ export async function signUpUser(
       if (modified) {
         await user.save();
       }
+    }
+
+    // Record completed profile milestones in the conversion funnel
+    if (cleanName) {
+      await recordFunnelEvent({ step: "name", visitorId: cleanEmail, email: cleanEmail, name: cleanName });
+    }
+    if (cleanPhoto) {
+      await recordFunnelEvent({ step: "photo", visitorId: cleanEmail, email: cleanEmail, name: cleanName });
+    }
+    if (cleanDob) {
+      await recordFunnelEvent({ step: "dob", visitorId: cleanEmail, email: cleanEmail, name: cleanName });
+    }
+    if (cleanBirthTime) {
+      await recordFunnelEvent({ step: "tob", visitorId: cleanEmail, email: cleanEmail, name: cleanName });
     }
 
     const token = signUserToken({
@@ -552,6 +567,19 @@ export async function recordAppScreenAttachment(
         { new: true }
       );
     }
+
+    // Record attached step in conversion funnel
+    await recordFunnelEvent({
+      step: "attached",
+      visitorId: cleanEmail || `install_${installRecord._id.toString()}`,
+      email: cleanEmail,
+      name: cleanName,
+      metadata: {
+        platform: cleanPlatform,
+        userAgent: cleanUserAgent,
+        question: cleanQuestion,
+      },
+    });
 
     res.status(200).json({
       success: true,

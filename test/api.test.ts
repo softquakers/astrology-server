@@ -95,7 +95,42 @@ async function runTests() {
       if (!attachData.success) throw new Error("POST /api/users/attach-screen did not return success");
       console.log("✓ Screen Attachment recording verified:", attachData.message);
 
-      console.log(" All server endpoint, EJS dashboard, and MongoDB-aware tests passed successfully!");
+      // 9. Test Funnel Analytics Tracking & Retrieval endpoints
+      const funnelPostRes = await fetch(`http://localhost:${testPort}/api/analytics/funnel`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          step: "launch",
+          visitorId: "test_visitor_001",
+          email: "test@example.com",
+          name: "Test User",
+        }),
+      });
+      if (funnelPostRes.status !== 200) throw new Error(`POST /api/analytics/funnel failed: ${funnelPostRes.status}`);
+      const funnelPostData = (await funnelPostRes.json()) as any;
+      if (!funnelPostData.success) throw new Error("POST /api/analytics/funnel did not return success");
+      console.log("✓ Funnel Event recorded successfully:", funnelPostData.message);
+
+      const funnelGetRes = await fetch(`http://localhost:${testPort}/api/analytics/funnel`);
+      if (funnelGetRes.status !== 200) throw new Error(`GET /api/analytics/funnel failed: ${funnelGetRes.status}`);
+      const funnelGetData = (await funnelGetRes.json()) as any;
+      if (!funnelGetData.success || !funnelGetData.metrics || !Array.isArray(funnelGetData.metrics.steps)) {
+        throw new Error("Invalid GET /api/analytics/funnel response format");
+      }
+      if (funnelGetData.metrics.steps.length !== 7) {
+        throw new Error(`Expected 7 funnel steps, got: ${funnelGetData.metrics.steps.length}`);
+      }
+      console.log("✓ Funnel Metrics verified with 7 pipeline steps:", funnelGetData.metrics.steps.map((s: any) => s.label).join(" -> "));
+
+      // Verify Admin Dashboard renders Funnel Section
+      const adminUpdatedRes = await fetch(`http://localhost:${testPort}/admin`);
+      const adminUpdatedHtml = await adminUpdatedRes.text();
+      if (!adminUpdatedHtml.includes("User Conversion &amp; Onboarding Funnel") && !adminUpdatedHtml.includes("User Conversion & Onboarding Funnel")) {
+        throw new Error("Admin dashboard missing Funnel Section markup");
+      }
+      console.log("✓ Admin Dashboard renders live Conversion & Onboarding Funnel!");
+
+      console.log(" All server endpoint, EJS dashboard, funnel analytics, and MongoDB-aware tests passed successfully!");
       process.exit(0);
     } catch (err) {
       console.error("Test failure:", err);

@@ -3,6 +3,7 @@ import { User, IUser, SubscriptionStatus } from "../models/User.js";
 import { ChartRecord } from "../models/ChartRecord.js";
 import { AppInstall } from "../models/AppInstall.js";
 import { isDatabaseConnected, getDatabaseStatus } from "../config/database.js";
+import { getFunnelMetrics, seedFunnelDemoData } from "../services/funnelService.js";
 
 /**
  * Renders the Admin Dashboard with user statistics and subscription payment overview.
@@ -31,6 +32,19 @@ export async function getAdminDashboard(
           unpaidRevenue: 0,
           totalCharts: 0,
           paidRate: 0,
+        },
+        funnel: {
+          steps: [],
+          totalLaunches: 0,
+          nameCompleted: 0,
+          photoCompleted: 0,
+          dobCompleted: 0,
+          tobCompleted: 0,
+          subscribedCount: 0,
+          attachedCount: 0,
+          overallPaidRate: 0,
+          overallAttachRate: 0,
+          profileCompletionRate: 0,
         },
         users: [],
         recentAttachments: [],
@@ -76,6 +90,7 @@ export async function getAdminDashboard(
       allUnpaidList,
       users,
       recentAttachments,
+      funnel,
     ] = await Promise.all([
       User.countDocuments(),
       User.countDocuments({ subscriptionStatus: "active" }),
@@ -87,6 +102,7 @@ export async function getAdminDashboard(
       User.find({ subscriptionStatus: { $in: ["unpaid", "past_due"] } }).select("monthlyFee").lean(),
       User.find(filterQuery).sort({ createdAt: -1 }).limit(100).lean(),
       AppInstall.find().sort({ createdAt: -1 }).limit(15).lean(),
+      getFunnelMetrics(),
     ]);
 
     // Calculate Monthly Recurring Revenue (MRR)
@@ -124,6 +140,7 @@ export async function getAdminDashboard(
         totalCharts,
         paidRate,
       },
+      funnel,
       users,
       recentAttachments,
       currentFilter: String(filter),
@@ -409,7 +426,10 @@ export async function postSeedDemoData(
       }
     }
 
-    res.redirect("/admin?alertType=success&alertMsg=Demonstration+users+successfully+seeded!");
+    // Seed realistic funnel event analytics along with demo users
+    await seedFunnelDemoData();
+
+    res.redirect("/admin?alertType=success&alertMsg=Demonstration+users+and+funnel+data+successfully+seeded!");
   } catch (err) {
     next(err);
   }
