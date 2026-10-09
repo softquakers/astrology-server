@@ -6,6 +6,7 @@ import { ChartRequestBody, ChartResponse } from "../types/index.js";
 import { ChartRecord } from "../models/ChartRecord.js";
 import { isDatabaseConnected } from "../config/database.js";
 import { buildFullAstrologicalReading } from "../services/openaiService.js";
+import { recordFunnelEvent } from "../services/funnelService.js";
 
 /**
  * Calculates birth chart and optionally persists to MongoDB when connected.
@@ -71,6 +72,13 @@ export async function createChart(
 
         response.id = record._id.toString();
         response.saved = true;
+
+        // Record real funnel milestones for this chart calculation
+        const visitorId = (email && email.trim()) || `chart_${record._id.toString()}`;
+        await recordFunnelEvent({ step: "launch", visitorId, email, name });
+        if (name) await recordFunnelEvent({ step: "name", visitorId, email, name });
+        if (date) await recordFunnelEvent({ step: "dob", visitorId, email, name });
+        if (time) await recordFunnelEvent({ step: "tob", visitorId, email, name });
       } catch (dbErr) {
         console.warn("⚠️ Failed to persist chart to MongoDB:", dbErr);
         response.saved = false;

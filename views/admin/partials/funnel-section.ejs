@@ -6,7 +6,7 @@
         <span class="funnel-icon-badge">📊</span>
         <h2 class="funnel-heading">User Conversion &amp; Onboarding Funnel</h2>
         <span class="funnel-live-pill">
-          <span class="pulse-dot"></span> Live Drop-Off Analytics
+          <span class="pulse-dot"></span> Live Real Data (MongoDB)
         </span>
       </div>
       <p class="funnel-subheading">
@@ -15,14 +15,14 @@
     </div>
 
     <div class="funnel-actions">
-      <form action="/admin/funnel/seed" method="POST" style="margin: 0; display: inline-block;">
-        <button type="submit" class="btn btn-secondary btn-sm" title="Generate realistic demo visitors across all funnel steps">
-          ✨ Seed Demo Funnel
+      <form action="/admin/funnel/sync" method="POST" style="margin: 0; display: inline-block;">
+        <button type="submit" class="btn btn-secondary btn-sm" title="Synchronize and refresh real querents, charts & events from database">
+          🔄 Sync Real Data
         </button>
       </form>
-      <form action="/admin/funnel/reset" method="POST" onsubmit="return confirm('Reset all live funnel visitor events?');" style="margin: 0; display: inline-block;">
-        <button type="submit" class="btn btn-secondary btn-sm" style="color: #f87171;" title="Clear recorded funnel events">
-          🔄 Reset
+      <form action="/admin/funnel/reset" method="POST" onsubmit="return confirm('Reset recorded funnel events and re-synchronize from active user database?');" style="margin: 0; display: inline-block;">
+        <button type="submit" class="btn btn-secondary btn-sm" style="color: #f87171;" title="Reset funnel visitor events and resync from MongoDB">
+          🗑️ Reset &amp; Resync
         </button>
       </form>
     </div>

@@ -1,6 +1,8 @@
 import { FunnelEvent, FunnelStep } from "../models/FunnelEvent.js";
 import { User } from "../models/User.js";
 import { AppInstall } from "../models/AppInstall.js";
+import { ChartRecord } from "../models/ChartRecord.js";
+import { Subscription } from "../models/Subscription.js";
 import { isDatabaseConnected } from "../config/database.js";
 
 export interface FunnelRecordInput {
@@ -125,6 +127,161 @@ const STEP_DEFINITIONS: {
 ];
 
 /**
+ * Purges all synthetic / demo funnel records so analytics only show real user traffic.
+ */
+export async function purgeDemoFunnelData(): Promise<number> {
+  if (!isDatabaseConnected()) return 0;
+  try {
+    const result = await FunnelEvent.deleteMany({
+      $or: [
+        { visitorId: { $regex: /^demo_/ } },
+        { visitorId: { $regex: /^integration_/ } },
+      ],
+    });
+    return result.deletedCount || 0;
+  } catch (err) {
+    console.warn("purgeDemoFunnelData warning:", err);
+    return 0;
+  }
+}
+
+/**
+ * Synchronizes real historical records from User, ChartRecord, and AppInstall
+ * into FunnelEvent so all genuine querents are properly reflected in the funnel pipeline.
+ */
+export async function syncRealFunnelData(): Promise<{ synced: number }> {
+  if (!isDatabaseConnected()) return { synced: 0 };
+
+  let count = 0;
+  try {
+    // Purge any residual demo visitors first
+    await purgeDemoFunnelData();
+
+    const [users, charts, installs, subscriptions] = await Promise.all([
+      User.find({}).lean(),
+      ChartRecord.find({}).lean(),
+      AppInstall.find({}).lean(),
+      Subscription.find({ status: "active" }).lean(),
+    ]);
+
+    // Fetch existing real events to avoid duplicate step logging
+    const existingEvents = await FunnelEvent.find(
+      { visitorId: { $not: /^demo_/ } },
+      "step visitorId"
+    ).lean();
+
+    const existingKeySet = new Set(
+      existingEvents.map(e => `${e.step}:::${String(e.visitorId).toLowerCase().trim()}`)
+    );
+
+    const eventsToInsert: Array<{
+      step: FunnelStep;
+      visitorId: string;
+      email: string;
+      name: string;
+      createdAt: Date;
+    }> = [];
+
+    const queueEvent = (
+      step: FunnelStep,
+      visitorId: string,
+      email?: string,
+      name?: string,
+      createdAt?: Date
+    ) => {
+      const cleanVid = String(visitorId || "").trim().toLowerCase();
+      if (!cleanVid) return;
+
+      const key = `${step}:::${cleanVid}`;
+      if (!existingKeySet.has(key)) {
+        existingKeySet.add(key);
+        eventsToInsert.push({
+          step,
+          visitorId: cleanVid,
+          email: typeof email === "string" ? email.trim().toLowerCase() : "",
+          name: typeof name === "string" ? name.trim() : "",
+          createdAt: createdAt instanceof Date ? createdAt : new Date(),
+        });
+        count++;
+      }
+    };
+
+    // 1. Process all registered users
+    for (const u of users) {
+      const vid = (u.email || u._id.toString()).trim().toLowerCase();
+      const uEmail = u.email || "";
+      const uName = u.name || "";
+      const createdAt = u.createdAt || new Date();
+
+      queueEvent("launch", vid, uEmail, uName, createdAt);
+      if (u.name && u.name.trim()) {
+        queueEvent("name", vid, uEmail, uName, createdAt);
+      }
+      if (u.photoUrl && u.photoUrl.trim()) {
+        queueEvent("photo", vid, uEmail, uName, createdAt);
+      }
+      if (u.dob && u.dob.trim()) {
+        queueEvent("dob", vid, uEmail, uName, createdAt);
+      }
+      if (u.birthTime && u.birthTime.trim()) {
+        queueEvent("tob", vid, uEmail, uName, createdAt);
+      }
+      if (u.subscriptionStatus === "active" || u.isPremium) {
+        queueEvent("subscribed", vid, uEmail, uName, u.updatedAt || createdAt);
+      }
+      if (u.isAppAttached) {
+        queueEvent("attached", vid, uEmail, uName, u.appAttachedAt || createdAt);
+      }
+    }
+
+    // 2. Process all chart calculations
+    for (const c of charts) {
+      const vid = (c.email && c.email.trim().toLowerCase()) || `chart_${c._id.toString()}`;
+      const cEmail = c.email || "";
+      const cName = c.name || "";
+      const createdAt = c.createdAt || new Date();
+
+      queueEvent("launch", vid, cEmail, cName, createdAt);
+      if (c.name && c.name.trim()) {
+        queueEvent("name", vid, cEmail, cName, createdAt);
+      }
+      if (c.date && c.date.trim()) {
+        queueEvent("dob", vid, cEmail, cName, createdAt);
+      }
+      if (c.time && c.time.trim()) {
+        queueEvent("tob", vid, cEmail, cName, createdAt);
+      }
+    }
+
+    // 3. Process app screen attachments
+    for (const ins of installs) {
+      const vid = (ins.email && ins.email.trim().toLowerCase()) || `install_${ins._id.toString()}`;
+      const insEmail = ins.email || "";
+      const insName = ins.name || "";
+      const createdAt = ins.createdAt || new Date();
+
+      queueEvent("launch", vid, insEmail, insName, createdAt);
+      queueEvent("attached", vid, insEmail, insName, createdAt);
+    }
+
+    // 4. Process active subscriptions
+    for (const sub of subscriptions) {
+      const vid = (sub.email && sub.email.trim().toLowerCase()) || `sub_${sub._id.toString()}`;
+      queueEvent("launch", vid, sub.email, "", sub.createdAt);
+      queueEvent("subscribed", vid, sub.email, "", sub.createdAt);
+    }
+
+    if (eventsToInsert.length > 0) {
+      await FunnelEvent.insertMany(eventsToInsert);
+    }
+  } catch (err) {
+    console.warn("syncRealFunnelData warning:", err);
+  }
+
+  return { synced: count };
+}
+
+/**
  * Records an onboarding / conversion funnel event.
  */
 export async function recordFunnelEvent(
@@ -137,6 +294,11 @@ export async function recordFunnelEvent(
     }
 
     const cleanVisitorId = visitorId.trim();
+    // Do not record demo events as real events
+    if (cleanVisitorId.startsWith("demo_")) {
+      return { success: true, recorded: false };
+    }
+
     const cleanEmail = typeof email === "string" ? email.trim().toLowerCase() : "";
     const cleanName = typeof name === "string" ? name.trim() : "";
 
@@ -180,7 +342,8 @@ export async function recordFunnelEvent(
 }
 
 /**
- * Computes aggregated funnel conversion metrics and step-by-step drop-offs.
+ * Computes aggregated funnel conversion metrics using exclusively real database records
+ * and live visitor events.
  */
 export async function getFunnelMetrics(): Promise<FunnelMetricsSummary> {
   const emptyResult: FunnelMetricsSummary = {
@@ -209,7 +372,12 @@ export async function getFunnelMetrics(): Promise<FunnelMetricsSummary> {
   }
 
   try {
-    // 1. Query unique visitors per step in FunnelEvent collection
+    // 1. Ensure any historical users/charts are synced and demo records are purged
+    await syncRealFunnelData();
+
+    // 2. Query distinct real visitor events (strictly excluding demo visitors)
+    const realFilter = { visitorId: { $not: /^demo_/ } };
+
     const [
       launchVisitors,
       nameVisitors,
@@ -218,50 +386,85 @@ export async function getFunnelMetrics(): Promise<FunnelMetricsSummary> {
       tobVisitors,
       subscribedVisitors,
       attachedVisitors,
-      totalUsers,
-      usersWithName,
-      usersWithPhoto,
-      usersWithDob,
-      usersWithTob,
-      usersSubscribed,
-      usersAttached,
-      appInstallsCount,
+      users,
+      charts,
+      installs,
+      activeSubs,
     ] = await Promise.all([
-      FunnelEvent.distinct("visitorId", { step: "launch" }),
-      FunnelEvent.distinct("visitorId", { step: "name" }),
-      FunnelEvent.distinct("visitorId", { step: "photo" }),
-      FunnelEvent.distinct("visitorId", { step: "dob" }),
-      FunnelEvent.distinct("visitorId", { step: "tob" }),
-      FunnelEvent.distinct("visitorId", { step: "subscribed" }),
-      FunnelEvent.distinct("visitorId", { step: "attached" }),
-      User.countDocuments(),
-      User.countDocuments({ name: { $exists: true, $ne: "" } }),
-      User.countDocuments({ photoUrl: { $exists: true, $ne: "" } }),
-      User.countDocuments({ dob: { $exists: true, $ne: "" } }),
-      User.countDocuments({ birthTime: { $exists: true, $ne: "" } }),
-      User.countDocuments({ subscriptionStatus: "active" }),
-      User.countDocuments({ isAppAttached: true }),
-      AppInstall.countDocuments(),
+      FunnelEvent.distinct("visitorId", { step: "launch", ...realFilter }),
+      FunnelEvent.distinct("visitorId", { step: "name", ...realFilter }),
+      FunnelEvent.distinct("visitorId", { step: "photo", ...realFilter }),
+      FunnelEvent.distinct("visitorId", { step: "dob", ...realFilter }),
+      FunnelEvent.distinct("visitorId", { step: "tob", ...realFilter }),
+      FunnelEvent.distinct("visitorId", { step: "subscribed", ...realFilter }),
+      FunnelEvent.distinct("visitorId", { step: "attached", ...realFilter }),
+      User.find({}).lean(),
+      ChartRecord.find({}).lean(),
+      AppInstall.find({}).lean(),
+      Subscription.find({ status: "active" }).lean(),
     ]);
 
-    // Reconcile raw event counts with registered users & installs to ensure historical consistency
-    const rawAttached = Math.max(attachedVisitors.length, usersAttached, appInstallsCount);
-    const rawSubscribed = Math.max(subscribedVisitors.length, usersSubscribed);
-    const rawTob = Math.max(tobVisitors.length, usersWithTob);
-    const rawDob = Math.max(dobVisitors.length, usersWithDob, rawTob);
-    const rawPhoto = Math.max(photoVisitors.length, usersWithPhoto, rawDob);
-    const rawName = Math.max(nameVisitors.length, usersWithName, rawPhoto);
-    const rawLaunch = Math.max(launchVisitors.length, totalUsers, rawName);
+    // 3. Assemble unique sets of real people/devices for each milestone
+    const setLaunch = new Set<string>(launchVisitors.map(v => String(v).toLowerCase()));
+    const setName = new Set<string>(nameVisitors.map(v => String(v).toLowerCase()));
+    const setPhoto = new Set<string>(photoVisitors.map(v => String(v).toLowerCase()));
+    const setDob = new Set<string>(dobVisitors.map(v => String(v).toLowerCase()));
+    const setTob = new Set<string>(tobVisitors.map(v => String(v).toLowerCase()));
+    const setSubscribed = new Set<string>(subscribedVisitors.map(v => String(v).toLowerCase()));
+    const setAttached = new Set<string>(attachedVisitors.map(v => String(v).toLowerCase()));
 
-    // Compute step values ensuring proper monotonic funnel logic for display
+    // Incorporate real users
+    for (const u of users) {
+      const vid = (u.email || u._id.toString()).toLowerCase().trim();
+      setLaunch.add(vid);
+      if (u.name && u.name.trim()) setName.add(vid);
+      if (u.photoUrl && u.photoUrl.trim()) setPhoto.add(vid);
+      if (u.dob && u.dob.trim()) setDob.add(vid);
+      if (u.birthTime && u.birthTime.trim()) setTob.add(vid);
+      if (u.subscriptionStatus === "active" || u.isPremium) setSubscribed.add(vid);
+      if (u.isAppAttached) setAttached.add(vid);
+    }
+
+    // Incorporate real charts
+    for (const c of charts) {
+      const vid = (c.email && c.email.trim().toLowerCase()) || `chart_${c._id.toString()}`;
+      setLaunch.add(vid);
+      if (c.name && c.name.trim()) setName.add(vid);
+      if (c.date && c.date.trim()) setDob.add(vid);
+      if (c.time && c.time.trim()) setTob.add(vid);
+    }
+
+    // Incorporate app installs
+    for (const ins of installs) {
+      const vid = (ins.email && ins.email.trim().toLowerCase()) || `install_${ins._id.toString()}`;
+      setLaunch.add(vid);
+      setAttached.add(vid);
+    }
+
+    // Incorporate active subscriptions
+    for (const s of activeSubs) {
+      const vid = (s.email && s.email.trim().toLowerCase()) || `sub_${s._id.toString()}`;
+      setLaunch.add(vid);
+      setSubscribed.add(vid);
+    }
+
+    // Funnel pipeline progression: querents who reached deeper stages had to pass initial stages
+    const countAttached = setAttached.size;
+    const countSubscribed = setSubscribed.size;
+    const countTob = setTob.size;
+    const countDob = Math.max(setDob.size, countTob);
+    const countPhoto = setPhoto.size;
+    const countName = Math.max(setName.size, countDob, countPhoto);
+    const countLaunch = Math.max(setLaunch.size, countName);
+
     const counts: Record<FunnelStep, number> = {
-      launch: rawLaunch,
-      name: rawName,
-      photo: rawPhoto,
-      dob: rawDob,
-      tob: rawTob,
-      subscribed: rawSubscribed,
-      attached: rawAttached,
+      launch: countLaunch,
+      name: countName,
+      photo: countPhoto,
+      dob: countDob,
+      tob: countTob,
+      subscribed: countSubscribed,
+      attached: countAttached,
     };
 
     const totalLaunches = counts.launch;
@@ -283,13 +486,13 @@ export async function getFunnelMetrics(): Promise<FunnelMetricsSummary> {
           dropoffCount = Math.max(0, prevCount - stepCount);
           dropoffPct = Math.max(0, 100 - pctFromPrev);
         } else {
-          pctFromPrev = 0;
+          pctFromPrev = stepCount > 0 ? 100 : 0;
           dropoffCount = 0;
           dropoffPct = 0;
         }
       }
 
-      // Update prevCount for next step comparison
+      // Update prevCount for subsequent comparison
       prevCount = stepCount;
 
       return {
@@ -326,43 +529,31 @@ export async function getFunnelMetrics(): Promise<FunnelMetricsSummary> {
 }
 
 /**
- * Seeds demo funnel events corresponding to realistic visitor drop-off curves.
+ * Seeds demo funnel events if explicitly requested for testing in staging.
  */
 export async function seedFunnelDemoData(): Promise<void> {
   if (!isDatabaseConnected()) return;
 
   try {
-    // Clear existing events before seeding clean demo set
-    await FunnelEvent.deleteMany({});
+    // Purge prior demo events
+    await purgeDemoFunnelData();
 
-    // Target funnel proportions for realistic demo:
-    // 140 Launches -> 105 Names -> 82 Photos -> 64 DOBs -> 58 TOBs -> 21 Subscribed -> 16 Attached
     const sampleNames = [
       "Aarav Sharma", "Priya Patel", "Vikram Joshi", "Ananya Gupta",
       "Rohan Verma", "Sneha Rao", "Karan Malhotra", "Meera Nair",
-      "Arjun Kapoor", "Diya Sengupta", "Kabir Mehta", "Ishita Chawla",
-      "Nikhil Deshmukh", "Pooja Reddy", "Aditya Bose", "Sunita Pillai"
+      "Arjun Kapoor", "Diya Sengupta", "Kabir Mehta", "Ishita Chawla"
     ];
 
-    const totalVisitors = 140;
-    const nameDropoffAt = 105;
-    const photoDropoffAt = 82;
-    const dobDropoffAt = 64;
-    const tobDropoffAt = 58;
-    const subscribedDropoffAt = 21;
-    const attachedDropoffAt = 16;
-
+    const totalVisitors = 30;
     const eventsToInsert = [];
     const now = Date.now();
 
     for (let i = 1; i <= totalVisitors; i++) {
       const visitorId = `demo_visitor_${1000 + i}`;
       const name = sampleNames[i % sampleNames.length];
-      const email = `visitor${i}@example.com`;
-      const timeOffset = Math.floor(Math.random() * (7 * 24 * 60 * 60 * 1000)); // past 7 days
-      const createdAt = new Date(now - timeOffset);
+      const email = `demo_visitor${i}@example.com`;
+      const createdAt = new Date(now - i * 3600000);
 
-      // Step 1: Launch
       eventsToInsert.push({
         step: "launch" as FunnelStep,
         visitorId,
@@ -370,8 +561,7 @@ export async function seedFunnelDemoData(): Promise<void> {
         createdAt,
       });
 
-      // Step 2: Name
-      if (i <= nameDropoffAt) {
+      if (i <= 22) {
         eventsToInsert.push({
           step: "name" as FunnelStep,
           visitorId,
@@ -379,9 +569,7 @@ export async function seedFunnelDemoData(): Promise<void> {
           createdAt: new Date(createdAt.getTime() + 15000),
         });
       }
-
-      // Step 3: Photo
-      if (i <= photoDropoffAt) {
+      if (i <= 16) {
         eventsToInsert.push({
           step: "photo" as FunnelStep,
           visitorId,
@@ -389,9 +577,7 @@ export async function seedFunnelDemoData(): Promise<void> {
           createdAt: new Date(createdAt.getTime() + 35000),
         });
       }
-
-      // Step 4: DOB
-      if (i <= dobDropoffAt) {
+      if (i <= 14) {
         eventsToInsert.push({
           step: "dob" as FunnelStep,
           visitorId,
@@ -399,9 +585,7 @@ export async function seedFunnelDemoData(): Promise<void> {
           createdAt: new Date(createdAt.getTime() + 55000),
         });
       }
-
-      // Step 5: TOB
-      if (i <= tobDropoffAt) {
+      if (i <= 12) {
         eventsToInsert.push({
           step: "tob" as FunnelStep,
           visitorId,
@@ -410,9 +594,7 @@ export async function seedFunnelDemoData(): Promise<void> {
           createdAt: new Date(createdAt.getTime() + 75000),
         });
       }
-
-      // Step 6: Subscribed
-      if (i <= subscribedDropoffAt) {
+      if (i <= 4) {
         eventsToInsert.push({
           step: "subscribed" as FunnelStep,
           visitorId,
@@ -421,9 +603,7 @@ export async function seedFunnelDemoData(): Promise<void> {
           createdAt: new Date(createdAt.getTime() + 120000),
         });
       }
-
-      // Step 7: Attached
-      if (i <= attachedDropoffAt) {
+      if (i <= 3) {
         eventsToInsert.push({
           step: "attached" as FunnelStep,
           visitorId,

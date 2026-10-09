@@ -175,6 +175,7 @@ export async function signUpUser(
     }
 
     // Record completed profile milestones in the conversion funnel
+    await recordFunnelEvent({ step: "launch", visitorId: cleanEmail, email: cleanEmail, name: cleanName });
     if (cleanName) {
       await recordFunnelEvent({ step: "name", visitorId: cleanEmail, email: cleanEmail, name: cleanName });
     }
@@ -352,6 +353,21 @@ export async function googleAuth(
       if (modified) {
         await user.save();
       }
+    }
+
+    // Record completed milestones in conversion funnel for Google authenticated user
+    await recordFunnelEvent({ step: "launch", visitorId: cleanEmail, email: cleanEmail, name: user.name });
+    if (user.name) {
+      await recordFunnelEvent({ step: "name", visitorId: cleanEmail, email: cleanEmail, name: user.name });
+    }
+    if (user.photoUrl) {
+      await recordFunnelEvent({ step: "photo", visitorId: cleanEmail, email: cleanEmail, name: user.name });
+    }
+    if (user.dob) {
+      await recordFunnelEvent({ step: "dob", visitorId: cleanEmail, email: cleanEmail, name: user.name });
+    }
+    if (user.birthTime) {
+      await recordFunnelEvent({ step: "tob", visitorId: cleanEmail, email: cleanEmail, name: user.name });
     }
 
     const token = signUserToken({

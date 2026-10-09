@@ -3,6 +3,8 @@ import {
   recordFunnelEvent,
   getFunnelMetrics,
   seedFunnelDemoData,
+  purgeDemoFunnelData,
+  syncRealFunnelData,
   FunnelRecordInput,
 } from "../services/funnelService.js";
 import { FunnelEvent } from "../models/FunnelEvent.js";
@@ -56,7 +58,7 @@ export async function postFunnelEvent(
 }
 
 /**
- * Returns JSON metrics for the onboarding & conversion funnel.
+ * Returns JSON metrics for the onboarding & conversion funnel with real data.
  * GET /api/analytics/funnel
  */
 export async function getFunnelData(
@@ -76,7 +78,27 @@ export async function getFunnelData(
 }
 
 /**
- * Resets funnel events.
+ * Synchronizes and refreshes funnel analytics from live user database and charts.
+ * POST /admin/funnel/sync
+ */
+export async function postSyncFunnel(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    await purgeDemoFunnelData();
+    const result = await syncRealFunnelData();
+    res.redirect(
+      `/admin?alertType=success&alertMsg=Live+funnel+data+synchronized+from+database+(${result.synced}+milestones+updated)`
+    );
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * Resets funnel events and resynchronizes from real user profiles.
  * POST /admin/funnel/reset
  */
 export async function postResetFunnel(
@@ -86,14 +108,15 @@ export async function postResetFunnel(
 ): Promise<void> {
   try {
     await FunnelEvent.deleteMany({});
-    res.redirect("/admin?alertType=success&alertMsg=Funnel+data+successfully+reset");
+    await syncRealFunnelData();
+    res.redirect("/admin?alertType=success&alertMsg=Funnel+data+reset+and+resynced+from+real+database");
   } catch (err) {
     next(err);
   }
 }
 
 /**
- * Seeds demo funnel data.
+ * Seeds demo funnel data (if explicitly requested for testing).
  * POST /admin/funnel/seed
  */
 export async function postSeedFunnel(
@@ -103,7 +126,7 @@ export async function postSeedFunnel(
 ): Promise<void> {
   try {
     await seedFunnelDemoData();
-    res.redirect("/admin?alertType=success&alertMsg=Funnel+demo+data+successfully+seeded");
+    res.redirect("/admin?alertType=success&alertMsg=Funnel+demo+data+seeded");
   } catch (err) {
     next(err);
   }
