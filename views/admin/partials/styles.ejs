@@ -284,6 +284,7 @@ body {
 .metric-card.subscribed::before { background: linear-gradient(90deg, #10b981, #059669); }
 .metric-card.unpaid::before { background: linear-gradient(90deg, #ef4444, #f97316); }
 .metric-card.free::before { background: linear-gradient(90deg, var(--gold), #f59e0b); }
+.metric-card.attached::before { background: linear-gradient(90deg, #3b82f6, #06b6d4); }
 
 .metric-header {
   display: flex;
@@ -314,6 +315,7 @@ body {
 .metric-card.subscribed .metric-icon { background: var(--green-bg); color: #34d399; }
 .metric-card.unpaid .metric-icon { background: var(--red-bg); color: #f87171; }
 .metric-card.free .metric-icon { background: var(--gold-glow); color: var(--gold); }
+.metric-card.attached .metric-icon { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
 
 .metric-value {
   font-family: 'Outfit', sans-serif;
@@ -555,6 +557,11 @@ tr:hover td {
   background: rgba(148, 163, 184, 0.12);
   color: #94a3b8;
   border: 1px solid rgba(148, 163, 184, 0.25);
+}
+.pill.attached {
+  background: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+  border: 1px solid rgba(59, 130, 246, 0.3);
 }
 .pill.canceled {
   background: rgba(100, 116, 139, 0.15);

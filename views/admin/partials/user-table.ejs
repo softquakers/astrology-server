@@ -7,6 +7,7 @@
           <th>Plan</th>
           <th>Monthly Fee</th>
           <th>Payment Status</th>
+          <th>Screen Attached</th>
           <th>Next Billing Date</th>
           <th>Registered</th>
           <th>Actions</th>
@@ -21,7 +22,7 @@
                   <img src="<%= u.photoUrl %>" class="user-avatar" style="width:36px;height:36px;object-fit:cover;border-radius:50%;border:1px solid #e8b86b;" alt="avatar" />
                 <% } else { %>
                   <div class="user-avatar">
-                    <%= (u.name || u.email).charAt(0).toUpperCase() %>
+                    <%= (u.name || u.email || 'A').charAt(0).toUpperCase() %>
                   </div>
                 <% } %>
                 <div class="user-details">
@@ -64,11 +65,28 @@
               <% } %>
             </td>
             <td>
+              <% if (u.isAppAttached) { %>
+                <span class="pill attached">📲 Attached</span>
+                <% if (u.lastQuestionAsked) { %>
+                  <div style="font-size: 0.7rem; color: #a59fc8; max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 2px;" title="<%= String(u.lastQuestionAsked).replace(/"/g, '&quot;') %>">
+                    💬 <%= u.lastQuestionAsked %>
+                  </div>
+                <% } else if (u.appAttachedAt) { %>
+                  <div style="font-size: 0.7rem; color: #64748b; margin-top: 2px;">
+                    <%= new Date(u.appAttachedAt).toLocaleDateString() %>
+                  </div>
+                <% } %>
+              <% } else { %>
+                <span style="color: #64748b;">—</span>
+              <% } %>
+            </td>
+            <td>
               <% if (u.nextBillingDate) { %>
-                <span style="font-size: 0.82rem; color: <%= new Date(u.nextBillingDate) < new Date() ? '#f87171' : 'var(--text-muted)' %>">
+                <% const isOverdue = new Date(u.nextBillingDate).getTime() < Date.now(); %>
+                <span style="font-size: 0.82rem; color: <%= isOverdue ? '#f87171' : 'var(--text-muted)' %>;">
                   <%= new Date(u.nextBillingDate).toLocaleDateString() %>
-                  <% if (new Date(u.nextBillingDate) < new Date()) { %>
-                    <span style="font-size:0.7rem;font-weight:600;color:#f87171;">(Overdue)</span>
+                  <% if (isOverdue) { %>
+                    <span style="font-size: 0.7rem; font-weight: 600; color: #f87171;">(Overdue)</span>
                   <% } %>
                 </span>
               <% } else { %>
@@ -76,7 +94,7 @@
               <% } %>
             </td>
             <td style="color: var(--text-muted); font-size: 0.82rem;">
-              <%= new Date(u.createdAt).toLocaleDateString() %>
+              <%= u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '—' %>
             </td>
             <td>
               <div class="actions-group">
@@ -96,7 +114,7 @@
                   </form>
                 <% } %>
 
-                <form action="/admin/users/<%= u._id %>/delete" method="POST" onsubmit="return confirm('Delete user <%= u.email %>?');" style="display:inline;">
+                <form action="/admin/users/<%= u._id %>/delete" method="POST" onsubmit="return confirm('Delete this user?');" style="display:inline;">
                   <button type="submit" class="btn btn-secondary btn-sm" style="color:#ef4444;" title="Delete User">
                     🗑️
                   </button>

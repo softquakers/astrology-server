@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { User } from "../models/User.js";
+import { AppInstall } from "../models/AppInstall.js";
 import { isDatabaseConnected } from "../config/database.js";
 import { uploadPhotographToR2, isBase64Image } from "../services/r2Service.js";
 import { signUserToken, verifyUserToken } from "../services/authService.js";
@@ -496,3 +497,69 @@ export async function getMe(
     next(err);
   }
 }
+
+/**
+ * Records when a user confirms attaching the application to their home screen.
+ * Saves the event in AppInstall collection and updates the user's profile.
+ */
+export async function recordAppScreenAttachment(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const { email, name, question, platform, userAgent } = req.body || {};
+
+    const cleanEmail = typeof email === "string" ? email.trim().toLowerCase() : "";
+    const cleanName = typeof name === "string" ? name.trim() : "Querent";
+    const cleanQuestion = typeof question === "string" ? question.trim() : "";
+    const cleanPlatform = typeof platform === "string" ? platform.trim() : "Web / Mobile";
+    const cleanUserAgent = typeof userAgent === "string" ? userAgent.trim() : (req.headers["user-agent"] || "");
+
+    if (!isDatabaseConnected()) {
+      res.status(200).json({
+        success: true,
+        message: "App screen attachment recorded (offline mode)",
+        data: {
+          email: cleanEmail,
+          name: cleanName,
+          question: cleanQuestion,
+          platform: cleanPlatform,
+        },
+      });
+      return;
+    }
+
+    const installRecord = await AppInstall.create({
+      email: cleanEmail,
+      name: cleanName,
+      question: cleanQuestion,
+      platform: cleanPlatform,
+      userAgent: cleanUserAgent,
+    });
+
+    if (cleanEmail) {
+      await User.findOneAndUpdate(
+        { email: cleanEmail },
+        {
+          $set: {
+            isAppAttached: true,
+            appAttachedAt: new Date(),
+            appAttachedPlatform: cleanPlatform,
+            lastQuestionAsked: cleanQuestion,
+          },
+        },
+        { new: true }
+      );
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "App screen attachment recorded successfully",
+      recordId: installRecord._id.toString(),
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+

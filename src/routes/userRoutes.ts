@@ -1,5 +1,11 @@
 import { Router } from "express";
-import { signUpUser, getUserByEmail, googleAuth, getMe } from "../controllers/userController.js";
+import {
+  signUpUser,
+  getUserByEmail,
+  googleAuth,
+  getMe,
+  recordAppScreenAttachment,
+} from "../controllers/userController.js";
 import { uploadPhoto } from "../controllers/photoController.js";
 
 const router = Router();
@@ -14,6 +20,10 @@ router.post("/photo", uploadPhoto);
 
 // POST /api/users/signup - Sign up / register a user with DOB, photo, name
 router.post("/signup", signUpUser);
+
+// POST /api/users/attach-screen - Record when user attaches app to home screen
+router.post("/attach-screen", recordAppScreenAttachment);
+router.post("/attach-app", recordAppScreenAttachment);
 
 // POST /api/users/google-auth - Google Sign-In with credential token or profile
 router.post("/google-auth", googleAuth);

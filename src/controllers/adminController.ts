@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { User, IUser, SubscriptionStatus } from "../models/User.js";
 import { ChartRecord } from "../models/ChartRecord.js";
+import { AppInstall } from "../models/AppInstall.js";
 import { isDatabaseConnected, getDatabaseStatus } from "../config/database.js";
 
 /**
@@ -24,12 +25,15 @@ export async function getAdminDashboard(
           subscribedUsers: 0,
           unpaidUsers: 0,
           freeUsers: 0,
+          attachedCount: 0,
+          attachedRate: 0,
           mrr: 0,
           unpaidRevenue: 0,
           totalCharts: 0,
           paidRate: 0,
         },
         users: [],
+        recentAttachments: [],
         currentFilter: "all",
         searchQuery: "",
         alert: {
@@ -43,13 +47,15 @@ export async function getAdminDashboard(
     const { filter = "all", q = "", alertType, alertMsg } = req.query;
     const filterQuery: Record<string, unknown> = {};
 
-    // Filter by subscription status
+    // Filter by subscription status or screen attachment
     if (filter === "subscribed") {
       filterQuery.subscriptionStatus = "active";
     } else if (filter === "unpaid") {
       filterQuery.subscriptionStatus = { $in: ["unpaid", "past_due"] };
     } else if (filter === "free") {
       filterQuery.subscriptionStatus = "free";
+    } else if (filter === "attached") {
+      filterQuery.isAppAttached = true;
     }
 
     // Search by name or email
@@ -64,19 +70,23 @@ export async function getAdminDashboard(
       subscribedUsers,
       unpaidUsers,
       freeUsers,
+      attachedCount,
       totalCharts,
       allSubscribedList,
       allUnpaidList,
       users,
+      recentAttachments,
     ] = await Promise.all([
       User.countDocuments(),
       User.countDocuments({ subscriptionStatus: "active" }),
       User.countDocuments({ subscriptionStatus: { $in: ["unpaid", "past_due"] } }),
       User.countDocuments({ subscriptionStatus: "free" }),
+      User.countDocuments({ isAppAttached: true }),
       ChartRecord.countDocuments(),
       User.find({ subscriptionStatus: "active" }).select("monthlyFee").lean(),
       User.find({ subscriptionStatus: { $in: ["unpaid", "past_due"] } }).select("monthlyFee").lean(),
       User.find(filterQuery).sort({ createdAt: -1 }).limit(100).lean(),
+      AppInstall.find().sort({ createdAt: -1 }).limit(15).lean(),
     ]);
 
     // Calculate Monthly Recurring Revenue (MRR)
@@ -87,6 +97,9 @@ export async function getAdminDashboard(
 
     // Calculate percentage of paid subscribers vs total registered users
     const paidRate = totalUsers > 0 ? Math.round((subscribedUsers / totalUsers) * 100) : 0;
+
+    // Calculate percentage of users who attached app to home screen
+    const attachedRate = totalUsers > 0 ? Math.round((attachedCount / totalUsers) * 100) : 0;
 
     let alert = null;
     if (alertType && alertMsg) {
@@ -104,12 +117,15 @@ export async function getAdminDashboard(
         subscribedUsers,
         unpaidUsers,
         freeUsers,
+        attachedCount,
+        attachedRate,
         mrr: Number(mrr.toFixed(2)),
         unpaidRevenue: Number(unpaidRevenue.toFixed(2)),
         totalCharts,
         paidRate,
       },
       users,
+      recentAttachments,
       currentFilter: String(filter),
       searchQuery: String(q || ""),
       alert,
@@ -282,6 +298,10 @@ export async function postSeedDemoData(
         monthlyFee: 9.99,
         lastPaymentDate: pastTwoWeeks,
         nextBillingDate: nextMonth,
+        isAppAttached: true,
+        appAttachedAt: pastTwoWeeks,
+        appAttachedPlatform: "iOS / Safari",
+        lastQuestionAsked: "When will I meet my soulmate?",
       },
       {
         name: "Marcus Sterling",
@@ -292,6 +312,7 @@ export async function postSeedDemoData(
         monthlyFee: 9.99,
         lastPaymentDate: new Date(Date.now() - 40 * 24 * 60 * 60 * 1000),
         nextBillingDate: overdueDate,
+        isAppAttached: false,
       },
       {
         name: "Sophia Luna",
@@ -302,6 +323,10 @@ export async function postSeedDemoData(
         monthlyFee: 9.99,
         lastPaymentDate: now,
         nextBillingDate: nextMonth,
+        isAppAttached: true,
+        appAttachedAt: now,
+        appAttachedPlatform: "Android / Chrome",
+        lastQuestionAsked: "What does Jupiter transit mean for my career in 2026?",
       },
       {
         name: "David Chen",
@@ -312,6 +337,7 @@ export async function postSeedDemoData(
         monthlyFee: 14.99,
         lastPaymentDate: null,
         nextBillingDate: overdueDate,
+        isAppAttached: false,
       },
       {
         name: "Aria Solstice",
@@ -322,6 +348,10 @@ export async function postSeedDemoData(
         monthlyFee: 7.99,
         lastPaymentDate: pastTwoWeeks,
         nextBillingDate: nextMonth,
+        isAppAttached: true,
+        appAttachedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
+        appAttachedPlatform: "Windows / Chrome PWA",
+        lastQuestionAsked: "Is this month favorable for starting my business?",
       },
       {
         name: "Jordan Taylor",
@@ -332,6 +362,7 @@ export async function postSeedDemoData(
         monthlyFee: 0,
         lastPaymentDate: null,
         nextBillingDate: null,
+        isAppAttached: false,
       },
       {
         name: "Liam O'Connor",
@@ -342,6 +373,7 @@ export async function postSeedDemoData(
         monthlyFee: 9.99,
         lastPaymentDate: new Date(Date.now() - 35 * 24 * 60 * 60 * 1000),
         nextBillingDate: overdueDate,
+        isAppAttached: false,
       },
       {
         name: "Elena Rostova",
@@ -352,6 +384,10 @@ export async function postSeedDemoData(
         monthlyFee: 0,
         lastPaymentDate: null,
         nextBillingDate: null,
+        isAppAttached: true,
+        appAttachedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
+        appAttachedPlatform: "macOS / Safari PWA",
+        lastQuestionAsked: "Will travel abroad bring positive vitality?",
       },
     ];
 
@@ -361,6 +397,16 @@ export async function postSeedDemoData(
         { $set: demo },
         { upsert: true }
       );
+
+      if (demo.isAppAttached) {
+        await AppInstall.create({
+          email: demo.email,
+          name: demo.name,
+          question: demo.lastQuestionAsked || "Astrology query",
+          platform: demo.appAttachedPlatform || "Web",
+          userAgent: demo.appAttachedPlatform || "Web",
+        });
+      }
     }
 
     res.redirect("/admin?alertType=success&alertMsg=Demonstration+users+successfully+seeded!");

@@ -79,6 +79,22 @@ async function runTests() {
       }
       console.log(`✓ ChatGPT AI reading verified: "${askData.answer.aiAnswer.slice(0, 60)}..."`);
 
+      // 8. Test App Screen Attachment recording endpoint
+      const attachRes = await fetch(`http://localhost:${testPort}/api/users/attach-screen`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: "test@example.com",
+          name: "Test User",
+          question: "When will I get married?",
+          platform: "Desktop / Test Browser",
+        }),
+      });
+      if (attachRes.status !== 200) throw new Error(`POST /api/users/attach-screen failed: ${attachRes.status}`);
+      const attachData = (await attachRes.json()) as any;
+      if (!attachData.success) throw new Error("POST /api/users/attach-screen did not return success");
+      console.log("✓ Screen Attachment recording verified:", attachData.message);
+
       console.log(" All server endpoint, EJS dashboard, and MongoDB-aware tests passed successfully!");
       process.exit(0);
     } catch (err) {

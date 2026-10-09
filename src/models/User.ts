@@ -23,6 +23,10 @@ export interface IUser extends Document {
   razorpaySubscriptionId?: string;
   razorpayPaymentId?: string;
   razorpayPlanId?: string;
+  isAppAttached?: boolean;
+  appAttachedAt?: Date | null;
+  appAttachedPlatform?: string;
+  lastQuestionAsked?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -117,6 +121,23 @@ const UserSchema = new Schema<IUser>(
       default: "",
     },
     razorpayPlanId: {
+      type: String,
+      default: "",
+    },
+    isAppAttached: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    appAttachedAt: {
+      type: Date,
+      default: null,
+    },
+    appAttachedPlatform: {
+      type: String,
+      default: "",
+    },
+    lastQuestionAsked: {
       type: String,
       default: "",
     },

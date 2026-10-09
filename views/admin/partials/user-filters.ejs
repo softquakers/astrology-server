@@ -13,6 +13,9 @@
     <a href="/admin?filter=free" class="filter-tab <%= currentFilter === 'free' ? 'active' : '' %>">
       Free Tier (<%= stats.freeUsers %>)
     </a>
+    <a href="/admin?filter=attached" class="filter-tab <%= currentFilter === 'attached' ? 'active' : '' %>">
+      📲 Attached (<%= stats.attachedCount %>)
+    </a>
   </div>
 
   <!-- Search Form -->

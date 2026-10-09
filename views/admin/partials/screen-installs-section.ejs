@@ -1,0 +1,70 @@
+<div class="table-section" style="margin-top: 2rem;">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+    <div>
+      <h2 style="font-family: 'Outfit', sans-serif; font-size: 1.25rem; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 0.5rem;">
+        <span>📲</span> App Screen Attachments Log
+      </h2>
+      <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0.2rem;">
+        Track records of users who attached Astro Reports to their home screens after asking questions
+      </p>
+    </div>
+    <div style="font-size: 0.8rem; font-weight: 600; color: #60a5fa; background: rgba(59, 130, 246, 0.12); padding: 0.35rem 0.75rem; border-radius: 999px; border: 1px solid rgba(59, 130, 246, 0.3);">
+      <%= (recentAttachments && recentAttachments.length) || 0 %> Recent Events
+    </div>
+  </div>
+
+  <% if (recentAttachments && recentAttachments.length > 0) { %>
+    <div class="table-responsive">
+      <table>
+        <thead>
+          <tr>
+            <th>User / Querent</th>
+            <th>Question Asked When Attached</th>
+            <th>Device / Platform</th>
+            <th>Attached At</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% recentAttachments.forEach(function(item) { %>
+            <tr>
+              <td>
+                <div class="user-info">
+                  <div class="user-avatar" style="background: rgba(59, 130, 246, 0.2); color: #60a5fa;">
+                    <%= (item.name || item.email || "Q").charAt(0).toUpperCase() %>
+                  </div>
+                  <div class="user-details">
+                    <div class="user-name"><%= item.name || "Querent" %></div>
+                    <div class="user-email"><%= item.email || "Anonymous Visitor" %></div>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <div style="font-size: 0.82rem; color: #EDE9FA; font-style: italic; max-width: 320px; line-height: 1.4;">
+                  <%= item.question ? `"${item.question}"` : "General birth chart query" %>
+                </div>
+              </td>
+              <td>
+                <span style="font-size: 0.8rem; color: #a59fc8; background: #1c1538; padding: 0.2rem 0.5rem; border-radius: 6px; border: 1px solid #2e2752;">
+                  <%= item.platform || "Web PWA" %>
+                </span>
+              </td>
+              <td style="color: var(--text-muted); font-size: 0.82rem;">
+                <%= new Date(item.createdAt).toLocaleString() %>
+              </td>
+              <td>
+                <span class="pill attached">
+                  📲 Screen Attached
+                </span>
+              </td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+  <% } else { %>
+    <div style="padding: 2rem; text-align: center; background: var(--card-bg); border: 1px solid var(--border); border-radius: 14px; color: var(--text-muted); font-size: 0.88rem;">
+      <span>📱</span> No screen attachment events recorded yet. When users click "Yes, Attach to Screen" after asking an astrological question, their attachment logs will appear here.
+    </div>
+  <% } %>
+</div>
