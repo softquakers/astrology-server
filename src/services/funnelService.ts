@@ -161,7 +161,7 @@ export async function syncRealFunnelData(): Promise<{ synced: number }> {
       User.find({}).lean(),
       ChartRecord.find({}).lean(),
       AppInstall.find({}).lean(),
-      Subscription.find({ status: "active" }).lean(),
+      Subscription.find({ status: "ACTIVE" }).lean(),
     ]);
 
     // Fetch existing real events to avoid duplicate step logging
@@ -401,7 +401,7 @@ export async function getFunnelMetrics(): Promise<FunnelMetricsSummary> {
       User.find({}).lean(),
       ChartRecord.find({}).lean(),
       AppInstall.find({}).lean(),
-      Subscription.find({ status: "active" }).lean(),
+      Subscription.find({ status: "ACTIVE" }).lean(),
     ]);
 
     // 3. Assemble unique sets of real people/devices for each milestone
