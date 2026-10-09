@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import { User } from "../models/User.js";
 import { isDatabaseConnected } from "../config/database.js";
 import { uploadPhotographToR2, isBase64Image } from "../services/r2Service.js";
+import { signUserToken, verifyUserToken } from "../services/authService.js";
 
 export interface SignUpRequestBody {
   email: string;
@@ -91,9 +92,15 @@ export async function signUpUser(
 
     // If database is not connected, provide a graceful fallback response
     if (!isDatabaseConnected()) {
+      const token = signUserToken({
+        email: cleanEmail,
+        name: cleanName,
+        isPremium: false,
+      });
       res.status(200).json({
         success: true,
         offline: true,
+        token,
         message: "Sign up noted in offline mode; database currently disconnected",
         user: {
           email: cleanEmail,
@@ -165,8 +172,16 @@ export async function signUpUser(
       }
     }
 
+    const token = signUserToken({
+      userId: user._id.toString(),
+      email: user.email,
+      name: user.name,
+      isPremium: user.isPremium,
+    });
+
     res.status(200).json({
       success: true,
+      token,
       message: "User signed up successfully",
       user: {
         id: user._id.toString(),
@@ -245,9 +260,15 @@ export async function googleAuth(
     const cleanGoogleAuthBday = typeof targetGoogleBday === "string" ? targetGoogleBday.trim() : "";
 
     if (!isDatabaseConnected()) {
+      const token = signUserToken({
+        email: cleanEmail,
+        name: cleanName,
+        isPremium: false,
+      });
       res.status(200).json({
         success: true,
         offline: true,
+        token,
         message: "Google sign in noted (offline mode)",
         user: {
           email: cleanEmail,
@@ -317,8 +338,16 @@ export async function googleAuth(
       }
     }
 
+    const token = signUserToken({
+      userId: user._id.toString(),
+      email: user.email,
+      name: user.name,
+      isPremium: user.isPremium,
+    });
+
     res.status(200).json({
       success: true,
+      token,
       message: "Google sign-in successful",
       user: {
         id: user._id.toString(),
@@ -380,6 +409,88 @@ export async function getUserByEmail(
       subscriptionPlan: user.subscriptionPlan,
       isPremium: user.isPremium,
       createdAt: user.createdAt,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * Validates a 30-day JWT session token and returns current user details.
+ */
+export async function getMe(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const authHeader = req.headers.authorization;
+    let token = "";
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      token = authHeader.substring(7).trim();
+    } else if (req.body && req.body.token) {
+      token = String(req.body.token).trim();
+    } else if (req.query && req.query.token) {
+      token = String(req.query.token).trim();
+    }
+
+    if (!token) {
+      res.status(401).json({ success: false, error: "No session token provided" });
+      return;
+    }
+
+    const payload = verifyUserToken(token);
+    if (!payload || !payload.email) {
+      res.status(401).json({ success: false, error: "Session token is invalid or expired" });
+      return;
+    }
+
+    if (!isDatabaseConnected()) {
+      res.status(200).json({
+        success: true,
+        valid: true,
+        token,
+        user: {
+          email: payload.email,
+          name: payload.name || "",
+          isPremium: Boolean(payload.isPremium),
+        },
+      });
+      return;
+    }
+
+    const user = await User.findOne({ email: payload.email.toLowerCase().trim() });
+    if (!user) {
+      res.status(404).json({ success: false, error: "User account not found" });
+      return;
+    }
+
+    // Refresh token with latest user details if valid
+    const refreshedToken = signUserToken({
+      userId: user._id.toString(),
+      email: user.email,
+      name: user.name,
+      isPremium: user.isPremium,
+    });
+
+    res.status(200).json({
+      success: true,
+      valid: true,
+      token: refreshedToken,
+      user: {
+        id: user._id.toString(),
+        email: user.email,
+        name: user.name,
+        photoUrl: user.photoUrl,
+        dob: user.dob,
+        birthTime: user.birthTime,
+        birthPlace: user.birthPlace,
+        googleAuthBday: user.googleAuthBday,
+        subscriptionStatus: user.subscriptionStatus,
+        subscriptionPlan: user.subscriptionPlan,
+        isPremium: user.isPremium,
+        createdAt: user.createdAt,
+      },
     });
   } catch (err) {
     next(err);

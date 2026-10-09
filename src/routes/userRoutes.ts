@@ -1,8 +1,12 @@
 import { Router } from "express";
-import { signUpUser, getUserByEmail, googleAuth } from "../controllers/userController.js";
+import { signUpUser, getUserByEmail, googleAuth, getMe } from "../controllers/userController.js";
 import { uploadPhoto } from "../controllers/photoController.js";
 
 const router = Router();
+
+// GET /api/users/me - Verify 30-day session token and return user profile
+router.get("/me", getMe);
+router.post("/verify-token", getMe);
 
 // POST /api/users/upload-photo - Upload photograph to Cloudflare R2
 router.post("/upload-photo", uploadPhoto);

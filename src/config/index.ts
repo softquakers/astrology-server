@@ -36,5 +36,9 @@ export const config = {
       return Boolean(this.apiKey.trim());
     },
   },
+  jwt: {
+    secret: process.env.JWT_SECRET || "celestial_astrology_super_secret_jwt_key_2026_30d",
+    expiresIn: "30d",
+  },
 };
 
